@@ -34,7 +34,8 @@ function makeRenderer(canvas: HTMLCanvasElement) {
   r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   r.outputColorSpace = THREE.SRGBColorSpace;
   r.shadowMap.enabled = true;
-  r.shadowMap.type = THREE.PCFSoftShadowMap;
+  // PCFSoftShadowMap è deprecato da Three.js r186: PCFShadowMap dà lo stesso risultato
+  r.shadowMap.type = THREE.PCFShadowMap;
   return r;
 }
 
