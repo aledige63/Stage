@@ -1,0 +1,97 @@
+:root {
+  --bg: #16181c;
+  --panel: #1f2228;
+  --line: #2e323a;
+  --text: #e6e8eb;
+  --muted: #8b919c;
+  --accent: #f0a050;
+  --accent-text: #1a1206;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body { display: flex; }
+
+#panel {
+  width: 300px;
+  flex: none;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 14px 16px 24px;
+}
+
+h1 { font-size: 18px; margin: 0 0 12px; }
+h1 span { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+h3 { font-size: 12px; font-weight: 500; margin: 10px 0 6px; }
+h3 output { color: var(--accent); margin-left: 4px; }
+
+section { padding: 12px 0; border-top: 1px solid var(--line); }
+
+.seg { display: flex; gap: 4px; margin-bottom: 6px; }
+.seg.grid2 { display: grid; grid-template-columns: 1fr 1fr; }
+.seg button { flex: 1; }
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: #2a2e36;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+button:hover { background: #333842; }
+button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { width: 100%; padding: 10px; font-weight: 600; background: var(--accent); color: var(--accent-text); border: none; }
+button.secondary { width: 100%; margin-top: 6px; }
+
+input[type=range] { width: 100%; accent-color: var(--accent); }
+
+.check { display: flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer; }
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  background: #15171b;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  font: 12px/1.45 ui-monospace, Consolas, monospace;
+}
+
+#progress { height: 6px; background: #15171b; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+#progress div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+#status { color: var(--muted); min-height: 1.4em; margin: 8px 0 0; }
+
+#stage { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 0; }
+#frame { position: relative; box-shadow: 0 0 0 1px var(--line), 0 10px 40px rgba(0,0,0,.4); }
+#frame canvas { display: block; }
+
+#thirds { position: absolute; inset: 0; pointer-events: none; display: none; }
+#thirds.on { display: block; }
+#thirds i { position: absolute; background: rgba(255,255,255,.55); box-shadow: 0 0 1px rgba(0,0,0,.6); }
+#thirds i:nth-child(1) { left: 33.333%; top: 0; bottom: 0; width: 1px; }
+#thirds i:nth-child(2) { left: 66.666%; top: 0; bottom: 0; width: 1px; }
+#thirds i:nth-child(3) { top: 33.333%; left: 0; right: 0; height: 1px; }
+#thirds i:nth-child(4) { top: 66.666%; left: 0; right: 0; height: 1px; }
+
+#transport {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px 16px;
+}
+#transport button { width: 44px; }
+#time { width: 70px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }

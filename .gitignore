@@ -1,0 +1,16 @@
+# dipendenze e build
+node_modules/
+dist/
+
+# impostazioni locali dell'editor / di Claude Code
+.claude/
+.vscode/
+*.local
+
+# video generati e file di prova (non vanno nel repository)
+video__*.mp4
+*.stage.json
+
+# sistema operativo
+.DS_Store
+Thumbs.db

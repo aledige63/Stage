@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stage — Prototipo fase 0</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "mp4-muxer": "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm"
+      }
+    }
+  </script>
+</head>
+<body>
+  <aside id="panel">
+    <h1>Stage <span>prototipo fase 0</span></h1>
+
+    <section>
+      <h2>Movimento</h2>
+      <div class="seg grid2" data-key="preset">
+        <button data-v="orbita">Orbita 180°</button>
+        <button data-v="push">Push-in</button>
+        <button data-v="crane">Crane up</button>
+        <button data-v="zoom">Zoom in</button>
+      </div>
+      <h3>Curva</h3>
+      <div class="seg grid2" data-key="easing">
+        <button data-v="linear">Linear</button>
+        <button data-v="in">Ease In</button>
+        <button data-v="out">Ease Out</button>
+        <button data-v="inout">Ease In-Out</button>
+      </div>
+      <h3>Durata <output id="durOut"></output></h3>
+      <input type="range" id="duration" min="2" max="15" step="0.5">
+    </section>
+
+    <section>
+      <h2>Formato</h2>
+      <div class="seg" data-key="aspect">
+        <button data-v="16:9">16:9</button>
+        <button data-v="9:16">9:16</button>
+      </div>
+      <div class="seg" data-key="res" data-num>
+        <button data-v="720">720p</button>
+        <button data-v="1080">1080p</button>
+      </div>
+      <div class="seg" data-key="fps" data-num>
+        <button data-v="24">24 fps</button>
+        <button data-v="25">25 fps</button>
+        <button data-v="30">30 fps</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Stile video guida</h2>
+      <h3>Pavimento</h3>
+      <div class="seg" data-key="grid">
+        <button data-v="marcata">Griglia marcata</button>
+        <button data-v="leggera">Leggera</button>
+        <button data-v="scacchiera">Scacchiera</button>
+      </div>
+      <h3>Sfondo</h3>
+      <div class="seg" data-key="bg">
+        <button data-v="chiaro">Chiaro</button>
+        <button data-v="medio">Medio</button>
+        <button data-v="scuro">Scuro</button>
+      </div>
+      <h3>Manichino</h3>
+      <div class="seg" data-key="mann">
+        <button data-v="grigio">Grigio</button>
+        <button data-v="bianco">Bianco</button>
+        <button data-v="arancio">Arancio</button>
+      </div>
+      <label class="check"><input type="checkbox" id="refs"> Elementi di riferimento</label>
+      <label class="check"><input type="checkbox" id="thirdsToggle"> Overlay terzi (solo anteprima)</label>
+    </section>
+
+    <section>
+      <h2>Prompt H3</h2>
+      <textarea id="prompt" rows="6"></textarea>
+      <button id="copyPrompt" class="secondary">Copia prompt</button>
+    </section>
+
+    <section class="export">
+      <button id="exportBtn" class="primary">Esporta MP4</button>
+      <div id="progress"><div></div></div>
+      <p id="status"></p>
+    </section>
+  </aside>
+
+  <main id="stage">
+    <div id="area">
+      <div id="frame">
+        <canvas id="view"></canvas>
+        <div id="thirds"><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <div id="transport">
+      <button id="playBtn" aria-label="Play/Pausa">❚❚</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span id="time">0.00 s</span>
+    </div>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

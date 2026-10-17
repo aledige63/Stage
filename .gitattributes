@@ -1,0 +1,7 @@
+# Fine riga corretti per gli script di avvio, su qualsiasi sistema si faccia il checkout
+* text=auto
+*.bat     text eol=crlf
+*.command text eol=lf
+*.sh      text eol=lf
+*.mp4     binary
+*.png     binary
