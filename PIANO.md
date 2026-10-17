@@ -169,7 +169,7 @@ come sequenze di pose.
 - [x] Repository pubblico: https://github.com/aledige63/Stage
 - [x] Titolare del copyright in `LICENSE` (Aledige63); indirizzi GitHub nei README
 - [x] Primo commit e push (sopra il commit iniziale con la licenza creato da GitHub)
-- [ ] Attivare Pages (Settings → Pages → Source: GitHub Actions) e verificare https://aledige63.github.io/Stage/
+- [x] GitHub Pages attivo: app online su https://aledige63.github.io/Stage/ (verificata)
 - [ ] Esclusi dal repository: `video__00001_.mp4` (output H3 di prova), `.claude/`, `node_modules/`, `dist/`
 
 ---
@@ -217,3 +217,5 @@ come sequenze di pose.
   workflow Pages). Pubblicazione in attesa della decisione pubblico/privato.
 - **2026-10-17** — Pubblicato su GitHub (repository pubblico aledige63/Stage, commit 8fddd19).
   In attesa dell'attivazione di GitHub Pages per l'app online.
+- **2026-10-17** — GitHub Pages attivato: l'app è online su https://aledige63.github.io/Stage/ e
+  si aggiorna da sola a ogni push su `main`. Prossimo passo: fase 5 (rifiniture).
