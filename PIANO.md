@@ -166,9 +166,10 @@ come sequenze di pose.
 - [x] Avvio con doppio clic per macOS (`Avvia-Stage.command`); messaggi degli avvii bilingui
 - [x] Workflow GitHub Pages (`.github/workflows/deploy.yml`): build e pubblicazione a ogni push su `main`
       (verificata la build pulita servita in sottocartella, come su Pages)
-- [ ] Decidere: repository pubblico o privato (in sospeso su richiesta dell'utente)
-- [ ] Nome del titolare del copyright in `LICENSE`; nome utente GitHub nei README
-- [ ] Creare il repository, primo commit e push; attivare Pages (Settings → Pages → GitHub Actions)
+- [x] Repository pubblico: https://github.com/aledige63/Stage
+- [x] Titolare del copyright in `LICENSE` (Aledige63); indirizzi GitHub nei README
+- [x] Primo commit e push (sopra il commit iniziale con la licenza creato da GitHub)
+- [ ] Attivare Pages (Settings → Pages → Source: GitHub Actions) e verificare https://aledige63.github.io/Stage/
 - [ ] Esclusi dal repository: `video__00001_.mp4` (output H3 di prova), `.claude/`, `node_modules/`, `dist/`
 
 ---
@@ -214,3 +215,5 @@ come sequenze di pose.
   sistema). Il prompt per H3 resta sempre in inglese. Prossimo passo: pubblicazione su GitHub.
 - **2026-10-17** — Preparati in locale i file per GitHub (licenza MIT, README IT/EN, avvio macOS,
   workflow Pages). Pubblicazione in attesa della decisione pubblico/privato.
+- **2026-10-17** — Pubblicato su GitHub (repository pubblico aledige63/Stage, commit 8fddd19).
+  In attesa dell'attivazione di GitHub Pages per l'app online.
