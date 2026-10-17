@@ -143,7 +143,7 @@ Every push to `main` is built and published to GitHub Pages by
 
 ## Roadmap
 
-Planned next (see [PIANO.md](PIANO.md)): undo/redo, a toggleable shortcut legend, keyboard
+Planned next (see [PIANO.md](PIANO.md)): spline (Bézier) handles to shape both the camera path and the speed curve of each segment, undo/redo, a toggleable shortcut legend, keyboard
 shortcuts for scene objects, a library of saved moves, installable offline app, up to three posable
 mannequins with names and colors, inverse-kinematics posing, still-image export (current frame,
 first/last frame, one image per keyframe) and a storyboard sheet.

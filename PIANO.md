@@ -125,8 +125,19 @@ poi **Copia prompt**. I progetti si spostano tra PC e Mac con **Salva…** / **A
 - [ ] Annulla/ripeti, libreria movimenti
 - [ ] Legenda dei tasti a scomparsa (richiesta utente)
 - [ ] Scorciatoie da tastiera per spostare / ruotare / scalare i solidi (richiesta utente)
-- [ ] Interfaccia in italiano
-- [ ] Pubblicazione online + installazione PWA su PC e Mac
+- [x] Interfaccia in italiano e inglese
+- [ ] Pubblicazione online (fatta) + installazione PWA offline su PC e Mac
+
+### Fase 5b — Timeline con maniglie spline (richiesta utente, prossime release)
+Controllo del movimento tramite maniglie di Bézier, in due punti dell'interfaccia:
+- [ ] **Maniglie sul percorso (vista regia)**: ogni keyframe ha due maniglie trascinabili che
+      curvano la traiettoria della camera nello spazio (archi asimmetrici, curve a S, aggiramenti
+      di ostacoli); il percorso diventa una spline che passa per i keyframe
+- [ ] **Maniglie sulla curva di velocità (timeline)**: editor a grafico per ogni tratto, con maniglie
+      che sostituiscono/estendono i preset Linear / Ease In / Ease Out / Ease In-Out (curva personalizzata)
+- [ ] Continuità tra i tratti: opzione per maniglie allineate (movimento senza scatti) o spezzate
+- [ ] Le maniglie si salvano nel progetto; i progetti esistenti restano validi (maniglie automatiche)
+- [ ] Il prompt descrive anche i percorsi curvi
 
 ### Fase 6 — Personaggi in posa e storyboard (richiesta utente)
 Idea: uno "storyboard animato" — personaggi in posa (ferma), camera animata dalla timeline,
@@ -219,3 +230,5 @@ come sequenze di pose.
   In attesa dell'attivazione di GitHub Pages per l'app online.
 - **2026-10-17** — GitHub Pages attivato: l'app è online su https://aledige63.github.io/Stage/ e
   si aggiorna da sola a ogni push su `main`. Prossimo passo: fase 5 (rifiniture).
+- **2026-10-17** — Aggiunta in pipeline (fase 5b) la timeline con maniglie spline: sul percorso
+  della camera in vista regia e sulla curva di velocità di ogni tratto.
