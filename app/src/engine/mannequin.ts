@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 
-/** Manichino neutro alto 1,8 m, piedi a y=0, guarda verso +Z. */
+/**
+ * Manichino neutro alto 1,8 m, piedi a y=0, guarda verso +Z.
+ * Contiene anche le sagome che possono sostituirlo nel video guida (userData.part).
+ */
 export function buildMannequin(mat: THREE.Material): THREE.Group {
   const g = new THREE.Group();
   const visorMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4 });
@@ -32,6 +35,21 @@ export function buildMannequin(mat: THREE.Material): THREE.Group {
     add(cap(0.05, 0.24), s * 0.26, 1.28, 0, { rz: s * 0.12 });
     add(cap(0.042, 0.22), s * 0.29, 0.99, 0.02, { rz: s * 0.05 });
     add(new THREE.SphereGeometry(0.045, 16, 12), s * 0.3, 0.83, 0.02, { scale: [0.8, 1.2, 1] });
+  }
+  for (const child of g.children) child.userData.part = 'manichino';
+
+  // sagome sostitutive: segnano solo posizione e ingombro (il blocco anche la direzione)
+  const proxies: [string, THREE.BufferGeometry][] = [
+    ['cilindro', new THREE.CylinderGeometry(0.25, 0.25, 1.8, 40)],
+    ['blocco', new THREE.BoxGeometry(0.5, 1.8, 0.3)],
+  ];
+  for (const [part, geo] of proxies) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = 0.9;
+    m.castShadow = m.receiveShadow = true;
+    m.userData.part = part;
+    m.visible = false;
+    g.add(m);
   }
   return g;
 }

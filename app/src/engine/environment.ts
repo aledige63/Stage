@@ -75,7 +75,8 @@ export function buildEnvironment(scene: THREE.Scene, style: StyleState, previous
     }
   }
 
-  if (style.refs) {
+  // senza soggetto le colonne restano sempre: danno al modello i riferimenti di spazio
+  if (style.refs || style.subject === 'nessuno') {
     const matA = new THREE.MeshStandardMaterial({ color: 0x8f8f8f, roughness: 0.8 });
     const matB = new THREE.MeshStandardMaterial({ color: 0x6e6e6e, roughness: 0.8 });
     for (let i = 0; i < 10; i++) {

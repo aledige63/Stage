@@ -41,6 +41,8 @@ risultato.
   movimento, pronto da incollare nel modello video.
 - **Progetti**: salva/apri file `.stage.json` (anche tra PC e Mac) e salvataggio automatico nel browser.
 - **Interfaccia in italiano e in inglese**.
+- **Soggetto nel video guida**: manichino, cilindro, blocco (solo posizione, ingombro e direzione) o
+  nessuno (solo pavimento e colonne di riferimento).
 
 ## Usala online
 
@@ -143,10 +145,17 @@ Ogni push su `main` viene compilato e pubblicato su GitHub Pages da
 
 ## Prossimi sviluppi
 
-In programma (vedi [PIANO.md](PIANO.md)): maniglie spline (Bézier) per modellare sia il percorso della camera sia la curva di velocità di ogni tratto, annulla/ripeti, legenda dei tasti a scomparsa, scorciatoie
-per gli oggetti della scena, libreria dei movimenti, app installabile offline, fino a tre manichini in
-posa con nomi e colori, posa con cinematica inversa, export di immagini (fotogramma corrente, primo e
-ultimo fotogramma, un'immagine per keyframe) e tavola storyboard.
+In programma (vedi [PIANO.md](PIANO.md) e [CHANGELOG.md](CHANGELOG.md)):
+
+1. Annulla/ripeti e test automatici.
+2. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
+   locale in un prompt Ref2VA.
+3. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
+   del soggetto.
+4. Maniglie spline (Bézier) sul percorso della camera.
+5. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
+   libreria dei movimenti, preset dolly zoom.
+6. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
 
 ## Licenza
 

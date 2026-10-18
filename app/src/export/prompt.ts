@@ -142,7 +142,13 @@ export function generatePrompt(s: AppState): string {
   const first = keys[0]?.camera ?? s.camera;
 
   const lines: string[] = [];
-  lines.push('Follow exactly the camera movement of the reference video; the gray mannequin and the grid are only a motion guide and must not appear.');
+  const guide = {
+    manichino: 'the gray mannequin and the floor grid are only a motion guide and must not appear',
+    cilindro: "the plain gray cylinder only marks the subject's position and scale, and together with the floor grid it is only a motion guide that must not appear",
+    blocco: "the plain gray block only marks the subject's position, scale and facing direction, and together with the floor grid it is only a motion guide that must not appear",
+    nessuno: 'the reference video shows only a floor grid and reference columns as a spatial guide, which must not appear',
+  }[s.style.subject];
+  lines.push(`Follow exactly the camera movement of the reference video; ${guide}.`);
   lines.push(`${s.aspect === '16:9' ? 'Horizontal 16:9' : 'Vertical 9:16'} framing, ${s.duration} seconds.`);
   lines.push(`Opening frame: ${shotSize(first, aspect)} of the subject, ${sideDesc(first, subject)}, ${angleDesc(first)}, ${Math.round(first.focal)}mm lens${Math.abs(first.roll) > 3 ? `, ${Math.round(Math.abs(first.roll))}-degree dutch angle` : ''}.`);
 

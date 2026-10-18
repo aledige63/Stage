@@ -27,7 +27,11 @@ export interface SceneObject {
   tone: number;
 }
 
+/** Cosa rappresenta il soggetto nel video guida (anteprima ed export). */
+export type SubjectMode = 'manichino' | 'cilindro' | 'blocco' | 'nessuno';
+
 export interface StyleState {
+  subject: SubjectMode;
   grid: 'marcata' | 'leggera' | 'scacchiera';
   bg: 'chiaro' | 'medio' | 'scuro';
   mann: 'grigio' | 'bianco' | 'arancio';
@@ -112,6 +116,8 @@ export interface AppState {
 
 export const MANNEQUIN_ID = 'manichino';
 
+export const DEFAULT_STYLE: StyleState = { subject: 'manichino', grid: 'marcata', bg: 'chiaro', mann: 'grigio', refs: false };
+
 export const DEFAULT_CAMERA: CameraState = { pos: [0, 1.5, 5], target: [0, 1.1, 0], roll: 0, focal: 35 };
 
 export const store = createStore<AppState>()(() => ({
@@ -139,7 +145,7 @@ export const store = createStore<AppState>()(() => ({
   ],
   selectedId: null,
   gizmo: 'translate',
-  style: { grid: 'marcata', bg: 'chiaro', mann: 'grigio', refs: false },
+  style: DEFAULT_STYLE,
 }));
 
 export const useApp = <T,>(selector: (s: AppState) => T): T => useStore(store, selector);

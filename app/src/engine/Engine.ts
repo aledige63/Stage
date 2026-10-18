@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import { store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject } from '../store';
+import { MANNEQUIN_ID, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject } from '../store';
 import { applyToCamera, aspectValue, crane, distance, dolly, orbit, pan, pedestal, step, tilt, truck, zoom } from './cameraOps';
 import { buildEnvironment, MANNEQUIN_COLORS } from './environment';
 import { buildMannequin } from './mannequin';
@@ -422,8 +422,28 @@ export class Engine {
     };
   }
 
+  /**
+   * Soggetto come appare nel video guida (forDirector=false) o in vista regia.
+   * In vista regia, se il soggetto è nascosto, il manichino resta visibile in trasparenza
+   * per sapere dove si trova.
+   */
+  private showSubject(forDirector: boolean) {
+    const node = this.nodes.get(MANNEQUIN_ID);
+    if (!node) return;
+    const mode = store.getState().style.subject;
+    const ghost = forDirector && mode === 'nessuno';
+    for (const child of node.children) {
+      const part = child.userData.part as string;
+      child.visible = part === mode || (ghost && part === 'manichino');
+    }
+    this.mannMat.transparent = ghost;
+    this.mannMat.opacity = ghost ? 0.25 : 1;
+    this.mannMat.depthWrite = !ghost;
+  }
+
   /** Disegna la scena senza camera, percorso, gizmo. */
   private renderClean(r: THREE.WebGLRenderer, cam: THREE.Camera) {
+    this.showSubject(false);
     this.helpers.visible = false;
     this.scene.remove(this.gizmoHelper);
     r.render(this.scene, cam);
@@ -482,6 +502,7 @@ export class Engine {
     this.renderClean(this.shotR, this.shotCam);
 
     this.orbitControls.update();
+    this.showSubject(true);
     this.dirR.render(this.scene, this.dirCam);
   }
 }

@@ -40,6 +40,8 @@ and scale cues without leaking into the result.
 - **Projects**: save/open `.stage.json` files (move them between PC and Mac) plus automatic saving
   in the browser.
 - **Italian and English interface**.
+- **Subject in the guide video**: mannequin, cylinder, block (position, size and facing only) or
+  none (floor and reference columns only).
 
 ## Use it online
 
@@ -143,10 +145,16 @@ Every push to `main` is built and published to GitHub Pages by
 
 ## Roadmap
 
-Planned next (see [PIANO.md](PIANO.md)): spline (Bézier) handles to shape both the camera path and the speed curve of each segment, undo/redo, a toggleable shortcut legend, keyboard
-shortcuts for scene objects, a library of saved moves, installable offline app, up to three posable
-mannequins with names and colors, inverse-kinematics posing, still-image export (current frame,
-first/last frame, one image per keyframe) and a storyboard sheet.
+Planned next (see [PIANO.md](PIANO.md) and [CHANGELOG.md](CHANGELOG.md)):
+
+1. Undo/redo and automated tests.
+2. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
+   Ref2VA prompt.
+3. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
+4. Spline (Bézier) handles on the camera path.
+5. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
+   of saved moves, a dolly-zoom preset.
+6. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
 
 ## License
 

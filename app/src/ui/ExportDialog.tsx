@@ -5,6 +5,7 @@ import { exportSize, exportVideo, videoSupported, type Resolution } from '../exp
 import { generatePrompt } from '../export/prompt';
 import { pickSaveTarget, sanitizeFileName } from '../export/files';
 import { useT } from '../i18n';
+import { SubjectPicker } from './Panel';
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const aspect = useApp(s => s.aspect);
@@ -80,6 +81,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
             </div>
             <span className="muted">{w}×{h} · {aspect} · {fps} fps · {duration} s · {Math.round(duration * fps)} {t('ex.frames')}</span>
           </div>
+          <SubjectPicker disabled={busy} />
           <label className="check">
             <input type="checkbox" checked={silentAudio} disabled={busy} onChange={e => setState({ exportAudio: e.target.checked })} />
             {t('ex.audio')}

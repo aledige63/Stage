@@ -7,33 +7,46 @@ ed esportarli come **video guida MP4** + **prompt testuale** da usare in MiniMax
 
 ## Stato delle fasi
 
+Versione attuale: **v0.5.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
+
 | Fase | Descrizione | Stato |
 |------|-------------|-------|
 | 0 | Prova di fattibilità con H3 (stile del video guida) | ✅ Completata |
 | 1 | Scena, primitive, viste, camera rig | ✅ Completata |
 | 2 | Timeline, keyframe, easing, preset | ✅ Completata |
 | 3 | Camera a mano e overlay | ✅ Completata |
-| 4 | Export MP4, prompt testuale, progetto JSON | ✅ Completata (anticipata) |
-| 5 | Rifiniture, animazioni manichino, pubblicazione PWA | 🔄 Prossima |
-| 6 | Personaggi in posa e storyboard (fino a 3 manichini, IK, export immagini) | ⏳ Da iniziare |
+| 4 | Export MP4, prompt testuale, progetto JSON | ✅ Completata |
+| — | Interfaccia IT/EN, pubblicazione GitHub, soggetto nel video guida | ✅ Completata (v0.5.0) |
+| 5 | Fondamenta: annulla/ripeti e test automatici | 🔄 Prossima |
+| 6 | Prompt "per LLM" (blocco camera compatto) | ⏳ Da iniziare |
+| 7 | Soggetto in movimento e target agganciato al soggetto | ⏳ Da iniziare |
+| 8 | Spline sul percorso della camera | ⏳ Da iniziare |
+| 9 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
+| 10 | Più personaggi e pose pronte (solo se i test della fase 7 lo giustificano) | ⏳ Condizionata |
 
 Legenda: ⏳ da iniziare · 🔄 in corso · ✅ completata
+
+Piano rivisto il 2026-10-18 dopo la revisione critica concordata con l'utente
+(vedi "Escluse" e il Registro).
 
 ---
 
 ## Decisioni prese
 
-- **Piattaforma:** web app nel browser, installabile come app (PWA), uguale su PC e Mac.
-  Eventuale app desktop (Tauri/Electron) valutata più avanti. Browser consigliato: Chrome o Edge.
-- **Export:** MP4 (guida camera per H3) + prompt testuale in inglese + progetto `.json`.
+- **Piattaforma:** web app nel browser, uguale su PC e Mac: online su GitHub Pages oppure in locale
+  con doppio clic. Niente PWA. Browser consigliato: Chrome o Edge.
+- **Flusso di lavoro dell'utente:** soprattutto **Ref2VA** in MiniMax H3 (character sheet,
+  abbigliamento, props, sfondo come riferimenti). Il video di Stage è `<Video 1>`, che "guida solo
+  il movimento di camera". Raramente c'è un'immagine di partenza.
+- **Prompt:** il testo di Stage viene rielaborato da un LLM locale (Gemma 4 12B, programma
+  dell'utente) e inserito nelle "Movement instructions" di un prompt strutturato. Più il testo è
+  articolato, peggiore è il risultato: il prompt di Stage deve essere **breve e strutturato**.
+- **Export:** MP4 (guida camera per H3, con traccia audio muta opzionale) + prompt + progetto `.json`.
 - **Formati:** 16:9 e 9:16 · durata 2–15 s · 24/25/30 fps · 720p o 1080p.
-- **Soggetto:** manichino neutro. Animazioni opzionali (fermo, cammina sul posto, si gira,
-  cammina avanti) in fase 5, con **Statico** come predefinito.
-- **Scena:** piano con griglia + primitive ridimensionabili (cubo, sfera, cilindro, piano).
+- **Soggetto:** manichino, cilindro, blocco o nessuno (con colonne di riferimento).
 - **Animazione:** keyframe con easing Linear / Ease In / Ease Out / Ease In-Out (+ Hold).
 - **Ottiche:** solo zoom (focale animabile).
-- **Extra:** camera a mano (switch + intensità/frequenza), overlay attivabili
-  (terzi, centro, aree di sicurezza) non inclusi nell'export.
+- **Versioni:** numerate (MAJOR.MINOR.PATCH), tag su GitHub e [CHANGELOG.md](CHANGELOG.md).
 - **Tecnologie:** TypeScript, Three.js, React, WebCodecs. Nessun server.
 
 ---
@@ -120,54 +133,74 @@ In alternativa, dalla cartella `app/`: `npm run dev` e aprire `http://localhost:
 **Esportare:** pulsante **Esporta…** in alto a destra → risoluzione → **Esporta MP4**,
 poi **Copia prompt**. I progetti si spostano tra PC e Mac con **Salva…** / **Apri…**.
 
-### Fase 5 — Rifiniture
-- [ ] Animazioni manichino (opzionali, default Statico)
-- [ ] Annulla/ripeti, libreria movimenti
-- [ ] Legenda dei tasti a scomparsa (richiesta utente)
-- [ ] Scorciatoie da tastiera per spostare / ruotare / scalare i solidi (richiesta utente)
-- [x] Interfaccia in italiano e inglese
-- [ ] Pubblicazione online (fatta) + installazione PWA offline su PC e Mac
+### Soggetto nel video guida (fatto, v0.5.0)
+- [x] Scelta del soggetto: **Manichino**, **Cilindro**, **Blocco** (indica anche la direzione), **Nessuno**
+      — nel pannello Stile e nella finestra Esporta; vale per anteprima ed export
+- [x] Senza soggetto: colonne di riferimento sempre attive per la spazialità; in vista regia il
+      manichino resta visibile in trasparenza
+- [x] Il prompt cambia la prima riga in base al soggetto scelto
+- [x] Test in H3 (stesso seed e prompt): tutte le varianti funzionano allo stesso modo; la
+      rigidità vista in precedenza non si ripresenta. Resta un'opzione utile, soprattutto in vista
+      del soggetto in movimento (fase 7)
 
-### Fase 5b — Timeline con maniglie spline (richiesta utente, prossime release)
-Controllo del movimento tramite maniglie di Bézier, in due punti dell'interfaccia:
-- [ ] **Maniglie sul percorso (vista regia)**: ogni keyframe ha due maniglie trascinabili che
-      curvano la traiettoria della camera nello spazio (archi asimmetrici, curve a S, aggiramenti
-      di ostacoli); il percorso diventa una spline che passa per i keyframe
-- [ ] **Maniglie sulla curva di velocità (timeline)**: editor a grafico per ogni tratto, con maniglie
-      che sostituiscono/estendono i preset Linear / Ease In / Ease Out / Ease In-Out (curva personalizzata)
-- [ ] Continuità tra i tratti: opzione per maniglie allineate (movimento senza scatti) o spezzate
+### Fase 5 — Fondamenta
+Prima delle modifiche grosse al cuore dell'interpolazione (fasi 7 e 8).
+- [ ] **Annulla / ripeti** (Ctrl+Z / Ctrl+Y) per keyframe, oggetti, preset e impostazioni
+- [ ] **Test automatici** (Vitest) per interpolazione, operazioni di camera, camera a mano, prompt e
+      validazione dei progetti; eseguiti anche nel workflow GitHub prima della pubblicazione
+
+### Fase 6 — Prompt "per LLM"
+Contesto: il prompt dell'utente (Ref2VA) ha sezioni `subject_definitions`, `summary`,
+`retention_analysis`, `detailed_description`; il testo di Stage finisce in
+"Movement instructions for <Video 1>". Il prompt dell'utente dichiara già che `<Video 1>` guida
+solo camera e ritmo.
+- [ ] Formato **"per LLM"** (predefinito) accanto a quello **"descrittivo"** attuale: solo il blocco
+      movimento — inquadratura iniziale, un tratto per riga (tempi, movimento, gradi/metri,
+      direzione, focale, curva), inquadratura finale
+- [ ] Nel formato per LLM niente riga sulla scena guida ("must not appear") né frase di stile finale:
+      sono già gestite dal prompt dell'utente
+- [ ] Tratto finale fermo ("holds still") indicato solo se dura in modo significativo (es. > 0,3 s)
+- [ ] Verifica sul flusso reale dell'utente (Stage → Gemma → H3)
+
+### Fase 7 — Soggetto in movimento e target agganciato (vitale)
+- [ ] **Keyframe del soggetto** nella timeline (posizione e rotazione), su una traccia separata da
+      quella della camera, con le stesse curve
+- [ ] **Target agganciato al soggetto**: punto posizionabile liberamente sul soggetto (testa, petto o
+      qualsiasi punto, con il gizmo) che segue posizione e rotazione del soggetto; la camera lo insegue
+- [ ] Possibilità di sganciare il target; preset di camera che tengono conto del movimento
+- [ ] Varianti per i test: manichino che scivola, cilindro/blocco al suo posto, semplice camminata ciclica
+- [ ] **Test H3**, es. manichino che va verso la camera mentre la camera gli va incontro:
+      verificare che il personaggio non "scivoli" e che il movimento venga letto correttamente
+- [ ] Il prompt descrive anche il movimento del soggetto
+
+### Fase 8 — Spline sul percorso della camera
+- [ ] **Maniglie sul percorso** (vista regia): ogni keyframe ha due maniglie trascinabili che curvano
+      la traiettoria nello spazio (archi asimmetrici, curve a S, aggiramenti di ostacoli)
+- [ ] Maniglie allineate (movimento senza scatti) o spezzate
 - [ ] Le maniglie si salvano nel progetto; i progetti esistenti restano validi (maniglie automatiche)
 - [ ] Il prompt descrive anche i percorsi curvi
 
-### Fase 6 — Personaggi in posa e storyboard (richiesta utente)
-Idea: uno "storyboard animato" — personaggi in posa (ferma), camera animata dalla timeline,
-export sia video sia immagini.
+### Fase 9 — Strumenti
+- [ ] **Export di immagini**: fotogramma corrente, primo e ultimo fotogramma, un'immagine per keyframe
+- [ ] **Legenda dei tasti a scomparsa** (richiesta utente)
+- [ ] **Scorciatoie per i solidi**: sposta / ruota / scala / duplica / elimina (richiesta utente)
+- [ ] **Libreria dei movimenti**: preset personali salvati con un nome e riutilizzabili tra progetti
+- [ ] Preset **dolly zoom** (effetto Vertigo)
+- [ ] Tavola storyboard con i fotogrammi dei keyframe (opzionale)
 
-**6a — Export immagini** (funziona già con il manichino attuale)
-- [ ] Fotogramma corrente in PNG alla risoluzione di export, senza overlay
-- [ ] Primo + ultimo fotogramma con un clic (ingressi per H3 FL2VA / I2VA)
-- [ ] Un'immagine per ogni keyframe, numerate
+### Fase 10 — Più personaggi e pose pronte (condizionata)
+Si fa solo se i test della fase 7 mostrano che posa e movimento del soggetto influenzano H3.
+- [ ] Fino a **3 soggetti**, ciascuno con nome e colore distinto
+- [ ] **Pose pronte** (in piedi, seduto, cammina, braccia incrociate, indica…), senza cinematica inversa
+- [ ] Prompt multi-soggetto coerente con lo schema dell'utente (`<Subject 1>`, `<Subject 2>`…)
 
-**6b — Più personaggi**
-- [ ] Fino a **3 manichini**, ciascuno con nome (A, B, C) e colore distinto
-- [ ] Inquadrature rapide e preset di camera sul personaggio selezionato o sul gruppo
-- [ ] Prompt che descrive tutti i personaggi e a chi si riferisce il movimento
-
-**6c — Manichino articolato con IK**
-- [ ] Scheletro: bacino, colonna, collo/testa, spalle, gomiti, polsi, anche, ginocchia, caviglie
-- [ ] **Cinematica inversa**: piedi ancorati a terra, abbassando il bacino si piegano le gambe;
-      mani trascinabili con gomiti che si piegano da soli (IK a due ossa con direzione del ginocchio/gomito)
-- [ ] Maniglie nella vista regia: bacino, mani, piedi, direzione dello sguardo
-- [ ] Rotazione diretta delle singole articolazioni (FK) con limiti anatomici
-- [ ] Pose pronte: in piedi, seduto, cammina, corre, braccia incrociate, indica, mani in tasca,
-      mani sui fianchi; ripristina posa
-- [ ] Test in H3: quanto le pose del manichino guidano le pose del risultato
-
-**6d — Tavola storyboard**
-- [ ] Fotogrammi dei keyframe affiancati con tempi e descrizione del movimento (PNG/PDF)
-
-Nota: le animazioni del manichino (fase 5) verranno costruite sopra lo scheletro della 6c,
-come sequenze di pose.
+### Escluse (decise il 2026-10-18)
+- **Cinematica inversa**: eccessiva rispetto al beneficio; sostituita dal soggetto in movimento (fase 7)
+  e dalle pose pronte (fase 10)
+- **PWA** (app installabile offline): bastano la versione online e l'avvio locale
+- **Immagine di riferimento in sovrapposizione**: il flusso Ref2VA raramente ha un'immagine di partenza
+- **Maniglie sulla curva di velocità**: rimandate, si riconsiderano solo se un test mostra che H3
+  segue sfumature di accelerazione oltre ai preset di easing
 
 ### Pubblicazione su GitHub
 - [x] Interfaccia in italiano e inglese con menu lingua
@@ -181,7 +214,8 @@ come sequenze di pose.
 - [x] Titolare del copyright in `LICENSE` (Aledige63); indirizzi GitHub nei README
 - [x] Primo commit e push (sopra il commit iniziale con la licenza creato da GitHub)
 - [x] GitHub Pages attivo: app online su https://aledige63.github.io/Stage/ (verificata)
-- [ ] Esclusi dal repository: `video__00001_.mp4` (output H3 di prova), `.claude/`, `node_modules/`, `dist/`
+- [x] Esclusi dal repository: `video__00001_.mp4` (output H3 di prova), `.claude/`, `node_modules/`, `dist/`
+- [x] Versioni numerate: `CHANGELOG.md` e tag Git (prima versione numerata: **v0.5.0**)
 
 ---
 
@@ -232,3 +266,17 @@ come sequenze di pose.
   si aggiorna da sola a ogni push su `main`. Prossimo passo: fase 5 (rifiniture).
 - **2026-10-17** — Aggiunta in pipeline (fase 5b) la timeline con maniglie spline: sul percorso
   della camera in vista regia e sulla curva di velocità di ogni tratto.
+- **2026-10-18** — Corretto l'avviso di Three.js sulle ombre (PCFShadowMap) e caricato su GitHub.
+- **2026-10-18** — Aggiunta la scelta del soggetto nel video guida (manichino / cilindro / blocco /
+  nessuno con colonne), perché in alcuni shot H3 sembra imitare il manichino irrigidendo il
+  personaggio. Verificato nel browser ed export. **Non ancora caricato su GitHub** (su richiesta:
+  andrà con il prossimo avanzamento).
+- **2026-10-18** — Test H3 del soggetto (stesso seed e prompt, variabili cambiate una alla volta):
+  tutte le varianti funzionano; la rigidità del giorno prima non si ripresenta.
+- **2026-10-18** — Revisione critica del piano concordata con l'utente. Nuovo ordine: fondamenta
+  (annulla/ripeti, test automatici) → prompt "per LLM" → soggetto in movimento con target
+  agganciato → spline sul percorso → strumenti → più personaggi (condizionata). Escluse: IK, PWA,
+  immagine di riferimento, maniglie sulla curva di velocità. Analizzato il prompt Ref2VA dell'utente
+  (rielaborato da Gemma 4 12B): il blocco di Stage va reso breve e strutturato.
+- **2026-10-18** — Prima versione numerata **v0.5.0** pubblicata su GitHub (include il soggetto nel
+  video guida).

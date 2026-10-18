@@ -1,4 +1,4 @@
-import { DEFAULT_CAMERA, MANNEQUIN_ID, setState, store, type AppState } from './store';
+import { DEFAULT_CAMERA, DEFAULT_STYLE, MANNEQUIN_ID, setState, store, type AppState } from './store';
 import { pickSaveTarget, sanitizeFileName } from './export/files';
 import { t } from './i18n';
 
@@ -59,6 +59,8 @@ function applyData(d: SavedState) {
     center: d.center ?? false,
     safe: d.safe ?? false,
     handheld: d.handheld ?? store.getState().handheld,
+    // progetti salvati prima dell'opzione "soggetto": manichino
+    style: { ...DEFAULT_STYLE, ...d.style },
     camera: d.camera ?? d.keyframes[0]?.camera ?? DEFAULT_CAMERA,
     time: 0,
     playing: false,

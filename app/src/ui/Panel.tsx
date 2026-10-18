@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   addPrimitive, DEFAULT_CAMERA, MANNEQUIN_ID, removeObject, setCamera, setState, setStyle, store, updateObject, useApp,
-  type PrimitiveKind, type SceneObject, type Vec3,
+  type PrimitiveKind, type SceneObject, type SubjectMode, type Vec3,
 } from '../store';
 import { distance, FOCAL_MAX, FOCAL_MIN, frame, type Action, type Framing } from '../engine/cameraOps';
 import { press, release } from '../engine/input';
@@ -212,6 +212,7 @@ function StyleSection() {
   const t = useT();
   return (
     <Section title={t('style.title')}>
+      <SubjectPicker />
       <h3>{t('style.floor')}</h3>
       <Seg value={style.grid} options={(['marcata', 'leggera', 'scacchiera'] as const).map(v => [v, t(`grid.${v}`)])} onChange={grid => setStyle({ grid })} />
       <h3>{t('style.bg')}</h3>
@@ -219,10 +220,33 @@ function StyleSection() {
       <h3>{t('style.mann')}</h3>
       <Seg value={style.mann} options={(['grigio', 'bianco', 'arancio'] as const).map(v => [v, t(`mann.${v}`)])} onChange={mann => setStyle({ mann })} />
       <label className="check">
-        <input type="checkbox" checked={style.refs} onChange={e => setStyle({ refs: e.target.checked })} />
+        <input type="checkbox" checked={style.refs || style.subject === 'nessuno'} disabled={style.subject === 'nessuno'}
+          onChange={e => setStyle({ refs: e.target.checked })} />
         {t('style.refs')}
       </label>
+      {style.subject === 'nessuno' && <p className="note">{t('style.refsForced')}</p>}
     </Section>
+  );
+}
+
+const SUBJECTS: SubjectMode[] = ['manichino', 'cilindro', 'blocco', 'nessuno'];
+
+/** Scelta del soggetto nel video guida: usata nel pannello Stile e nella finestra Esporta. */
+export function SubjectPicker({ disabled }: { disabled?: boolean }) {
+  const subject = useApp(s => s.style.subject);
+  const t = useT();
+  return (
+    <>
+      <h3>{t('style.subject')}</h3>
+      <div className="seg">
+        {SUBJECTS.map(v => (
+          <button key={v} className={v === subject ? 'on' : ''} disabled={disabled} onClick={() => setStyle({ subject: v })}>{t(`subject.${v}`)}</button>
+        ))}
+      </div>
+      {subject !== 'manichino' && (
+        <p className="note">{t(subject === 'nessuno' ? 'subject.note.none' : 'subject.note.proxy')}</p>
+      )}
+    </>
   );
 }
 
