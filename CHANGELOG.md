@@ -4,6 +4,12 @@ All notable changes to Stage are listed here. Versions follow MAJOR.MINOR.PATCH.
 Tutte le modifiche rilevanti di Stage sono elencate qui (in inglese; il diario di sviluppo in
 italiano è in [PIANO.md](PIANO.md)).
 
+## [0.5.1] — 2026-10-19
+
+### Fixed
+- **Windows launcher**: `Avvia-Stage.bat` closed immediately without starting the server. Parentheses
+  in the bilingual messages broke the `if ( … )` blocks of the batch file; they are now escaped.
+
 ## [0.5.0] — 2026-10-18
 
 First numbered release.
@@ -30,4 +36,5 @@ First numbered release.
 - Italian and English interface.
 - Windows and macOS launchers; online version on GitHub Pages.
 
+[0.5.1]: https://github.com/aledige63/Stage/releases/tag/v0.5.1
 [0.5.0]: https://github.com/aledige63/Stage/releases/tag/v0.5.0

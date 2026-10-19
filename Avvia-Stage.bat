@@ -12,7 +12,7 @@ if errorlevel 1 (
   if exist "%ProgramFiles%\nodejs\node.exe" (
     set "PATH=%ProgramFiles%\nodejs;%PATH%"
   ) else (
-    echo Node.js non trovato / not found: https://nodejs.org (LTS)
+    echo Node.js non trovato / not found: https://nodejs.org ^(LTS^)
     pause
     exit /b 1
   )
@@ -23,7 +23,7 @@ curl -s -o nul "%URL%" && goto apri
 
 rem --- Prima installazione delle dipendenze --------------------------------
 if not exist "node_modules" (
-  echo Prima installazione delle dipendenze / Installing dependencies (first run)...
+  echo Prima installazione delle dipendenze / Installing dependencies ^(first run^)...
   call npm install
   if errorlevel 1 (
     echo Installazione non riuscita / Install failed

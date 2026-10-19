@@ -7,7 +7,7 @@ ed esportarli come **video guida MP4** + **prompt testuale** da usare in MiniMax
 
 ## Stato delle fasi
 
-Versione attuale: **v0.5.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
+Versione attuale: **v0.5.1** (vedi [CHANGELOG.md](CHANGELOG.md)).
 
 | Fase | Descrizione | Stato |
 |------|-------------|-------|
@@ -145,6 +145,9 @@ poi **Copia prompt**. I progetti si spostano tra PC e Mac con **Salva…** / **A
 
 ### Fase 5 — Fondamenta
 Prima delle modifiche grosse al cuore dell'interpolazione (fasi 7 e 8).
+- [ ] **Prossima release**: rinominare i file di avvio `Avvia-Stage.bat` → `Start-Stage.bat` e
+      `Avvia-Stage.command` → `Start-Stage.command` (richiesta utente), aggiornando README e PIANO
+      e mantenendo il permesso di esecuzione del file macOS
 - [ ] **Annulla / ripeti** (Ctrl+Z / Ctrl+Y) per keyframe, oggetti, preset e impostazioni
 - [ ] **Test automatici** (Vitest) per interpolazione, operazioni di camera, camera a mano, prompt e
       validazione dei progetti; eseguiti anche nel workflow GitHub prima della pubblicazione
@@ -280,3 +283,10 @@ Si fa solo se i test della fase 7 mostrano che posa e movimento del soggetto inf
   (rielaborato da Gemma 4 12B): il blocco di Stage va reso breve e strutturato.
 - **2026-10-18** — Prima versione numerata **v0.5.0** pubblicata su GitHub (include il soggetto nel
   video guida).
+- **2026-10-18** — Release v0.5.0 pubblicata anche nella pagina Releases di GitHub (utente).
+  Annotata per la prossima release la rinomina dei file di avvio da "Avvia" a "Start".
+- **2026-10-19** — Corretto `Avvia-Stage.bat`: le parentesi aggiunte nei messaggi bilingui ("(LTS)",
+  "(first run)") chiudevano i blocchi `if ( … )` e il prompt dei comandi si chiudeva con un errore di
+  sintassi. Ora sono protette con `^`; provato con avvio a freddo: server attivo in 2 s.
+  Il difetto è presente nella v0.5.0 pubblicata.
+- **2026-10-19** — Pubblicata la correzione come **v0.5.1**.
