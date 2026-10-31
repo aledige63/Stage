@@ -61,11 +61,11 @@ Requisiti: [Node.js](https://nodejs.org) 20 o successivo (consigliata la version
    git clone https://github.com/aledige63/Stage.git
    ```
 2. Avvia Stage:
-   - **Windows**: doppio clic su `Avvia-Stage.bat`.
-   - **macOS**: doppio clic su `Avvia-Stage.command`. La prima volta, se macOS non lo apre, fai clic
+   - **Windows**: doppio clic su `Start-Stage.bat`.
+   - **macOS**: doppio clic su `Start-Stage.command`. La prima volta, se macOS non lo apre, fai clic
      destro → **Apri**. Se hai scaricato lo ZIP, rendilo eseguibile una volta dal Terminale:
      ```bash
-     chmod +x Avvia-Stage.command
+     chmod +x Start-Stage.command
      ```
    - **Qualsiasi sistema**, da terminale:
      ```bash
@@ -126,8 +126,8 @@ app/                  l'applicazione Stage (Vite + TypeScript + React + Three.js
   src/ui/             pannello, timeline, finestra di export, barra del progetto
   src/i18n.ts         testi in italiano e inglese
 prototipo-fase0/      il primo prototipo in una sola pagina, usato per validare l'idea con H3
-Avvia-Stage.bat       avvio per Windows
-Avvia-Stage.command   avvio per macOS
+Start-Stage.bat       avvio per Windows
+Start-Stage.command   avvio per macOS
 PIANO.md              piano e diario di sviluppo
 ```
 
@@ -148,14 +148,15 @@ Ogni push su `main` viene compilato e pubblicato su GitHub Pages da
 In programma (vedi [PIANO.md](PIANO.md) e [CHANGELOG.md](CHANGELOG.md)):
 
 1. Annulla/ripeti e test automatici.
-2. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
+2. Import di semplici scene di previz da Blender (GLB), incorporate nel progetto.
+3. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
    locale in un prompt Ref2VA.
-3. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
+4. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
    del soggetto.
-4. Maniglie spline (Bézier) sul percorso della camera.
-5. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
+5. Maniglie spline (Bézier) sul percorso della camera.
+6. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
    libreria dei movimenti, preset dolly zoom.
-6. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
+7. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
 
 ## Licenza
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Engine } from './engine/Engine';
-import { Panel } from './ui/Panel';
+import { Panel, RightPanel } from './ui/Panel';
 import { Timeline } from './ui/Timeline';
 import { ProjectBar } from './ui/ProjectBar';
 import { useApp } from './store';
@@ -64,6 +64,7 @@ export default function App() {
         </main>
         <Timeline />
       </div>
+      <RightPanel />
     </div>
   );
 }

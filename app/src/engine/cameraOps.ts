@@ -116,9 +116,12 @@ const FRAMINGS: Record<Framing, { center: number; halfHeight: number }> = {
   primo: { center: 1.6, halfHeight: 0.26 },
 };
 
-/** Inquadratura standard del soggetto, mantenendo la direzione da cui la camera lo guarda. */
-export function frame(c: CameraState, subject: Vec3, kind: Framing, aspect: Aspect): CameraState {
-  const f = FRAMINGS[kind];
+/**
+ * Inquadratura standard del soggetto, mantenendo la direzione da cui la camera lo guarda.
+ * scale = altezza del soggetto / altezza del manichino (1 = 1,8 m).
+ */
+export function frame(c: CameraState, subject: Vec3, kind: Framing, aspect: Aspect, scale = 1): CameraState {
+  const f = { center: FRAMINGS[kind].center * scale, halfHeight: FRAMINGS[kind].halfHeight * scale };
   const T = new THREE.Vector3(subject[0], subject[1] + f.center, subject[2]);
   const dir = v(c.pos).sub(T);
   dir.y = 0;
@@ -144,6 +147,19 @@ export function applyToCamera(cam: THREE.PerspectiveCamera, c: CameraState, aspe
     cam.translateZ(shake.z);
   }
   cam.setFocalLength(c.focal);
+}
+
+/** Inclinazione della camera in gradi: negativa = guarda in basso. */
+export function pitchDegrees(c: CameraState) {
+  const d = v(c.target).sub(v(c.pos)).normalize();
+  return Math.asin(clamp(d.y, -1, 1)) / DEG;
+}
+
+/** Cambia l'altezza della camera restando puntata sul target. */
+export function setHeight(c: CameraState, y: number): CameraState {
+  const P = v(c.pos);
+  P.y = y;
+  return withPos(c, P);
 }
 
 export function distance(c: CameraState) {

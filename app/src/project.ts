@@ -1,6 +1,7 @@
-import { DEFAULT_CAMERA, DEFAULT_STYLE, MANNEQUIN_ID, setState, store, type AppState } from './store';
+import { DEFAULT_CAMERA, DEFAULT_STYLE, MANNEQUIN_HEIGHT, MANNEQUIN_ID, setState, store, type AppState } from './store';
 import { pickSaveTarget, sanitizeFileName } from './export/files';
 import { t } from './i18n';
+import { clearHistory } from './history';
 
 // Formato del file di progetto (.stage.json). Contiene solo i dati, non lo stato
 // temporaneo dell'interfaccia (testina, selezione, riproduzione).
@@ -11,7 +12,7 @@ const AUTOSAVE_KEY = 'stage:autosave';
 
 const SAVED_KEYS = [
   'projectName', 'exportRes', 'exportAudio', 'duration', 'fps', 'keyframes', 'loop',
-  'aspect', 'thirds', 'center', 'safe', 'handheld', 'camera', 'speed', 'objects', 'style',
+  'aspect', 'thirds', 'center', 'safe', 'handheld', 'subjectHeight', 'camera', 'speed', 'objects', 'style',
 ] as const;
 
 type SavedState = Pick<AppState, (typeof SAVED_KEYS)[number]>;
@@ -34,7 +35,7 @@ function isVec3(x: unknown): boolean {
 }
 
 /** Controlli minimi: un file sbagliato non deve rompere la scena. */
-function validate(raw: unknown): SavedState {
+export function validate(raw: unknown): SavedState {
   const f = raw as Partial<ProjectFile>;
   if (!f || f.format !== FORMAT || typeof f.data !== 'object' || f.data === null) {
     throw new Error(t('err.notProject'));
@@ -59,6 +60,7 @@ function applyData(d: SavedState) {
     center: d.center ?? false,
     safe: d.safe ?? false,
     handheld: d.handheld ?? store.getState().handheld,
+    subjectHeight: d.subjectHeight ?? MANNEQUIN_HEIGHT,
     // progetti salvati prima dell'opzione "soggetto": manichino
     style: { ...DEFAULT_STYLE, ...d.style },
     camera: d.camera ?? d.keyframes[0]?.camera ?? DEFAULT_CAMERA,
@@ -83,6 +85,7 @@ export async function saveProject() {
 export async function openProject(file: File) {
   const data = validate(JSON.parse(await file.text()));
   applyData(data);
+  clearHistory();
 }
 
 export function newProject() {
@@ -97,6 +100,7 @@ export function newProject() {
     selectedKey: null,
     dirty: false,
   });
+  clearHistory();
 }
 
 // ---------------------------------------------------------------------------

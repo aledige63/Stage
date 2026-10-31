@@ -60,11 +60,11 @@ Requirements: [Node.js](https://nodejs.org) 20 or newer (LTS recommended) and Ch
    git clone https://github.com/aledige63/Stage.git
    ```
 2. Start Stage:
-   - **Windows**: double-click `Avvia-Stage.bat`.
-   - **macOS**: double-click `Avvia-Stage.command`. The first time, if macOS refuses to open it,
+   - **Windows**: double-click `Start-Stage.bat`.
+   - **macOS**: double-click `Start-Stage.command`. The first time, if macOS refuses to open it,
      right-click it → **Open**. If you downloaded the ZIP, make it executable once in Terminal:
      ```bash
-     chmod +x Avvia-Stage.command
+     chmod +x Start-Stage.command
      ```
    - **Any system**, from a terminal:
      ```bash
@@ -126,8 +126,8 @@ app/                  the Stage application (Vite + TypeScript + React + Three.j
   src/ui/             panel, timeline, export dialog, project bar
   src/i18n.ts         Italian / English texts
 prototipo-fase0/      the first single-page prototype used to validate the idea with H3
-Avvia-Stage.bat       Windows launcher
-Avvia-Stage.command   macOS launcher
+Start-Stage.bat       Windows launcher
+Start-Stage.command   macOS launcher
 PIANO.md              development plan and log (in Italian)
 ```
 
@@ -148,13 +148,14 @@ Every push to `main` is built and published to GitHub Pages by
 Planned next (see [PIANO.md](PIANO.md) and [CHANGELOG.md](CHANGELOG.md)):
 
 1. Undo/redo and automated tests.
-2. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
+2. Import of simple previz scenes from Blender (GLB), embedded in the project.
+3. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
    Ref2VA prompt.
-3. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
-4. Spline (Bézier) handles on the camera path.
-5. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
+4. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
+5. Spline (Bézier) handles on the camera path.
+6. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
    of saved moves, a dolly-zoom preset.
-6. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
+7. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
 
 ## License
 

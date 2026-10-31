@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import { MANNEQUIN_ID, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject } from '../store';
+import { MANNEQUIN_ID, subjectScale, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject } from '../store';
 import { applyToCamera, aspectValue, crane, distance, dolly, orbit, pan, pedestal, step, tilt, truck, zoom } from './cameraOps';
 import { buildEnvironment, MANNEQUIN_COLORS } from './environment';
 import { buildMannequin } from './mannequin';
@@ -9,6 +9,7 @@ import { held, KEYMAP } from './input';
 import { samplePath } from './interpolation';
 import { handheldShake, type Shake } from './handheld';
 import { advance, bindTimelineShortcuts, pause } from '../timeline';
+import { bindHistoryShortcuts } from '../history';
 
 const DEG = Math.PI / 180;
 
@@ -74,6 +75,11 @@ export class Engine {
   private aimLine: THREE.Line;
   private targetMark: THREE.Mesh;
   private pathLine: THREE.Line;
+  // altezza della camera da terra, in vista regia
+  private heightLine: THREE.Line;
+  private heightLabel: THREE.Sprite;
+  private heightCanvas = document.createElement('canvas');
+  private heightText = '';
   private keyMarks = new THREE.Group();
 
   private env: THREE.Group | null = null;
@@ -150,7 +156,19 @@ export class Engine {
       new THREE.BufferGeometry(),
       new THREE.LineBasicMaterial({ color: 0xf0a050 }),
     );
-    this.helpers.add(this.camHelper, this.camBody, this.aimLine, this.targetMark, this.pathLine, this.keyMarks);
+    this.heightLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.08, gapSize: 0.06 }),
+    );
+    this.heightCanvas.width = 256;
+    this.heightCanvas.height = 96;
+    const labelTex = new THREE.CanvasTexture(this.heightCanvas);
+    labelTex.colorSpace = THREE.SRGBColorSpace;
+    this.heightLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, depthTest: false, transparent: true }));
+    this.heightLabel.scale.set(0.6, 0.225, 1);
+    this.heightLabel.renderOrder = 10;
+    this.helpers.add(this.camHelper, this.camBody, this.aimLine, this.targetMark, this.pathLine, this.keyMarks,
+      this.heightLine, this.heightLabel);
     this.scene.add(this.helpers);
 
     this.syncObjects(s);
@@ -158,6 +176,7 @@ export class Engine {
     this.bindShotInput();
     this.bindDirectorInput();
     bindTimelineShortcuts(this.abort.signal);
+    bindHistoryShortcuts(this.abort.signal);
 
     this.unsubscribe = store.subscribe((next, prev) => this.onStateChange(next, prev));
     this.resizeObserver = new ResizeObserver(() => this.layout());
@@ -190,7 +209,7 @@ export class Engine {
       this.env = buildEnvironment(this.scene, s.style, this.env);
       this.mannMat.color.set(MANNEQUIN_COLORS[s.style.mann]);
     }
-    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo) {
+    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo || s.subjectHeight !== prev.subjectHeight) {
       this.syncObjects(s);
     }
     if (s.aspect !== prev.aspect) this.layout();
@@ -241,7 +260,9 @@ export class Engine {
       }
       node.position.set(...o.pos);
       node.rotation.set(o.rot[0] * DEG, o.rot[1] * DEG, o.rot[2] * DEG);
-      if (o.kind !== 'manichino') {
+      if (o.kind === 'manichino') {
+        node.scale.setScalar(subjectScale(s));
+      } else {
         node.scale.set(...o.scale);
         const g = 0.15 + o.tone * 0.8;
         ((node as THREE.Mesh).material as THREE.MeshStandardMaterial).color.setRGB(g, g, g, THREE.SRGBColorSpace);
@@ -331,6 +352,8 @@ export class Engine {
 
     area.addEventListener('keydown', e => {
       if (e.key === 'Shift') this.fast = true;
+      // Ctrl/Cmd + tasto è una scorciatoia (es. Ctrl+Z annulla), non un movimento di camera
+      if (e.ctrlKey || e.metaKey) return;
       const m = KEYMAP[e.code];
       if (!m) return;
       e.preventDefault();
@@ -491,6 +514,31 @@ export class Engine {
     line.setXYZ(1, c.target[0], c.target[1], c.target[2]);
     line.needsUpdate = true;
     this.aimLine.computeLineDistances();
+
+    // linea verticale dalla camera al pavimento con la misura
+    const p = this.shotCam.position;
+    const hl = this.heightLine.geometry.attributes.position as THREE.BufferAttribute;
+    hl.setXYZ(0, p.x, p.y, p.z);
+    hl.setXYZ(1, p.x, 0.005, p.z);
+    hl.needsUpdate = true;
+    this.heightLine.computeLineDistances();
+    this.heightLabel.position.set(p.x, Math.max(0.15, p.y / 2), p.z);
+    const text = p.y.toFixed(2) + ' m';
+    if (text !== this.heightText) {
+      this.heightText = text;
+      const ctx = this.heightCanvas.getContext('2d')!;
+      ctx.clearRect(0, 0, 256, 96);
+      ctx.fillStyle = 'rgba(22, 24, 28, 0.85)';
+      ctx.beginPath();
+      ctx.roundRect(8, 14, 240, 68, 14);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 44px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 50);
+      (this.heightLabel.material.map as THREE.Texture).needsUpdate = true;
+    }
   }
 
   private render() {

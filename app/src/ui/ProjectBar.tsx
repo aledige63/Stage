@@ -3,11 +3,13 @@ import { setState, useApp, type Lang } from '../store';
 import { newProject, openProject, saveProject } from '../project';
 import { LANGS, setLang, useT } from '../i18n';
 import { ExportDialog } from './ExportDialog';
+import { redo, undo, useHistory } from '../history';
 
 export function ProjectBar() {
   const name = useApp(s => s.projectName);
   const lang = useApp(s => s.lang);
   const t = useT();
+  const { canUndo, canRedo } = useHistory();
   const fileInput = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState('');
@@ -26,6 +28,8 @@ export function ProjectBar() {
         aria-label={t('pb.nameAria')}
         spellCheck={false}
       />
+      <button className="icon" onClick={undo} disabled={!canUndo} title={t('pb.undo')} aria-label={t('pb.undo')}>↶</button>
+      <button className="icon" onClick={redo} disabled={!canRedo} title={t('pb.redo')} aria-label={t('pb.redo')}>↷</button>
       <button onClick={() => { if (confirm(t('pb.newConfirm'))) newProject(); }}>{t('pb.new')}</button>
       <button onClick={() => fileInput.current?.click()}>{t('pb.open')}</button>
       <button onClick={async () => { if (await saveProject()) flash(t('pb.saved')); }}>{t('pb.save')}</button>

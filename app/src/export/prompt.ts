@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FILM_GAUGE } from '../engine/cameraOps';
-import { MANNEQUIN_ID, type AppState, type CameraState, type Easing, type Keyframe } from '../store';
+import { MANNEQUIN_ID, subjectScale, type AppState, type CameraState, type Easing, type Keyframe } from '../store';
 
 // Descrive in inglese il movimento della timeline, tratto per tratto, per accompagnare
 // il video guida in MiniMax H3.
@@ -18,9 +18,9 @@ function vHalfTan(c: CameraState, aspect: number) {
   return FILM_GAUGE / Math.max(aspect, 1) / 2 / c.focal;
 }
 
-function shotSize(c: CameraState, aspect: number) {
-  // altezza visibile all'altezza del soggetto
-  const visible = 2 * v(c.pos).distanceTo(v(c.target)) * vHalfTan(c, aspect);
+function shotSize(c: CameraState, aspect: number, scale: number) {
+  // altezza visibile all'altezza del soggetto, riportata a un soggetto di 1,8 m
+  const visible = (2 * v(c.pos).distanceTo(v(c.target)) * vHalfTan(c, aspect)) / scale;
   if (visible > 3.2) return 'wide shot';
   if (visible > 1.9) return 'full shot';
   if (visible > 1.1) return 'medium shot';
@@ -137,7 +137,7 @@ function describeSegment(a: Keyframe, b: Keyframe, s: Subject): string {
 export function generatePrompt(s: AppState): string {
   const aspect = s.aspect === '16:9' ? 16 / 9 : 9 / 16;
   const m = s.objects.find(o => o.id === MANNEQUIN_ID)!;
-  const subject: Subject = { pos: new THREE.Vector3(m.pos[0], m.pos[1] + 1, m.pos[2]), facing: m.rot[1] };
+  const subject: Subject = { pos: new THREE.Vector3(m.pos[0], m.pos[1] + subjectScale(s), m.pos[2]), facing: m.rot[1] };
   const keys = s.keyframes;
   const first = keys[0]?.camera ?? s.camera;
 
@@ -150,7 +150,7 @@ export function generatePrompt(s: AppState): string {
   }[s.style.subject];
   lines.push(`Follow exactly the camera movement of the reference video; ${guide}.`);
   lines.push(`${s.aspect === '16:9' ? 'Horizontal 16:9' : 'Vertical 9:16'} framing, ${s.duration} seconds.`);
-  lines.push(`Opening frame: ${shotSize(first, aspect)} of the subject, ${sideDesc(first, subject)}, ${angleDesc(first)}, ${Math.round(first.focal)}mm lens${Math.abs(first.roll) > 3 ? `, ${Math.round(Math.abs(first.roll))}-degree dutch angle` : ''}.`);
+  lines.push(`Opening frame: ${shotSize(first, aspect, subjectScale(s))} of the subject, ${sideDesc(first, subject)}, ${angleDesc(first)}, ${Math.round(first.focal)}mm lens${Math.abs(first.roll) > 3 ? `, ${Math.round(Math.abs(first.roll))}-degree dutch angle` : ''}.`);
 
   if (keys.length < 2) {
     lines.push('Static locked-off camera, no movement.');
@@ -162,7 +162,7 @@ export function generatePrompt(s: AppState): string {
     lines.push(...segs);
     const last = keys[keys.length - 1];
     if (last.time < s.duration - 0.05) lines.push(`From ${last.time.toFixed(1)}s to the end the camera holds still.`);
-    lines.push(`Final frame: ${shotSize(last.camera, aspect)}, ${sideDesc(last.camera, subject)}, ${angleDesc(last.camera)}, ${Math.round(last.camera.focal)}mm lens.`);
+    lines.push(`Final frame: ${shotSize(last.camera, aspect, subjectScale(s))}, ${sideDesc(last.camera, subject)}, ${angleDesc(last.camera)}, ${Math.round(last.camera.focal)}mm lens.`);
   }
   const h = s.handheld;
   if (h.enabled && h.intensity > 0) {

@@ -4,6 +4,22 @@ All notable changes to Stage are listed here. Versions follow MAJOR.MINOR.PATCH.
 Tutte le modifiche rilevanti di Stage sono elencate qui (in inglese; il diario di sviluppo in
 italiano è in [PIANO.md](PIANO.md)).
 
+## [0.6.0] — 2026-10-31
+
+### Added
+- **Two side panels**: camera controls on the left; subject, scene objects and guide-video style on
+  the right. Every section can be collapsed.
+- **Camera height**: editable "height above ground" field, tilt angle readout ("looking down / up /
+  level") and a dashed line with the measurement under the camera in the director view.
+- **Subject height** (1.00–2.10 m, with child / woman / man / tall presets): the mannequin, cylinder and
+  block scale with it; quick framings, presets and the prompt's shot sizes adapt.
+- **Undo / redo** (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z, and ↶ ↷ buttons) for keyframes, objects, presets,
+  subject, style and timeline settings.
+- **Automated tests** (Vitest, `npm test`), run in the GitHub workflow before publishing.
+
+### Changed
+- Launchers renamed to `Start-Stage.bat` and `Start-Stage.command`.
+
 ## [0.5.1] — 2026-10-19
 
 ### Fixed
@@ -36,5 +52,6 @@ First numbered release.
 - Italian and English interface.
 - Windows and macOS launchers; online version on GitHub Pages.
 
+[0.6.0]: https://github.com/aledige63/Stage/releases/tag/v0.6.0
 [0.5.1]: https://github.com/aledige63/Stage/releases/tag/v0.5.1
 [0.5.0]: https://github.com/aledige63/Stage/releases/tag/v0.5.0

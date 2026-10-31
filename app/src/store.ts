@@ -58,7 +58,7 @@ function initialLang(): Lang {
   } catch {
     // archiviazione non disponibile
   }
-  return navigator.language.toLowerCase().startsWith('it') ? 'it' : 'en';
+  return (globalThis.navigator?.language ?? 'en').toLowerCase().startsWith('it') ? 'it' : 'en';
 }
 
 const LANG = initialLang();
@@ -105,6 +105,8 @@ export interface AppState {
   /** aree di sicurezza azione 93% e titoli 90% (solo anteprima) */
   safe: boolean;
   handheld: HandheldState;
+  /** altezza del soggetto in metri (manichino, cilindro, blocco) */
+  subjectHeight: number;
   camera: CameraState;
   /** moltiplicatore di velocità per tastiera e pulsanti */
   speed: number;
@@ -115,6 +117,13 @@ export interface AppState {
 }
 
 export const MANNEQUIN_ID = 'manichino';
+/** altezza del modello del manichino: l'altezza del soggetto la scala in proporzione */
+export const MANNEQUIN_HEIGHT = 1.8;
+export const SUBJECT_HEIGHT_MIN = 1.0;
+export const SUBJECT_HEIGHT_MAX = 2.1;
+
+/** Fattore di scala del soggetto rispetto al modello del manichino. */
+export const subjectScale = (s: { subjectHeight: number }) => s.subjectHeight / MANNEQUIN_HEIGHT;
 
 export const DEFAULT_STYLE: StyleState = { subject: 'manichino', grid: 'marcata', bg: 'chiaro', mann: 'grigio', refs: false };
 
@@ -138,6 +147,7 @@ export const store = createStore<AppState>()(() => ({
   center: false,
   safe: false,
   handheld: { enabled: false, intensity: 0.35, frequency: 1, seed: 1 },
+  subjectHeight: MANNEQUIN_HEIGHT,
   camera: DEFAULT_CAMERA,
   speed: 1,
   objects: [

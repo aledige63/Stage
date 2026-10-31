@@ -7,7 +7,7 @@ ed esportarli come **video guida MP4** + **prompt testuale** da usare in MiniMax
 
 ## Stato delle fasi
 
-Versione attuale: **v0.5.1** (vedi [CHANGELOG.md](CHANGELOG.md)).
+Versione attuale: **v0.6.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
 
 | Fase | Descrizione | Stato |
 |------|-------------|-------|
@@ -17,12 +17,13 @@ Versione attuale: **v0.5.1** (vedi [CHANGELOG.md](CHANGELOG.md)).
 | 3 | Camera a mano e overlay | ✅ Completata |
 | 4 | Export MP4, prompt testuale, progetto JSON | ✅ Completata |
 | — | Interfaccia IT/EN, pubblicazione GitHub, soggetto nel video guida | ✅ Completata (v0.5.0) |
-| 5 | Fondamenta: annulla/ripeti e test automatici | 🔄 Prossima |
-| 6 | Prompt "per LLM" (blocco camera compatto) | ⏳ Da iniziare |
-| 7 | Soggetto in movimento e target agganciato al soggetto | ⏳ Da iniziare |
-| 8 | Spline sul percorso della camera | ⏳ Da iniziare |
-| 9 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
-| 10 | Più personaggi e pose pronte (solo se i test della fase 7 lo giustificano) | ⏳ Condizionata |
+| 5 | Fondamenta e interfaccia: annulla/ripeti, test, pannello destro, misure camera e soggetto | ✅ Completata (v0.6.0) |
+| 6 | Import di scene da Blender (GLB) | 🔄 Prossima |
+| 7 | Prompt "per LLM" (blocco camera compatto) | ⏳ Da iniziare |
+| 8 | Soggetto in movimento e target agganciato al soggetto | ⏳ Da iniziare |
+| 9 | Spline sul percorso della camera | ⏳ Da iniziare |
+| 10 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
+| 11 | Più personaggi e pose pronte (solo se i test della fase 8 lo giustificano) | ⏳ Condizionata |
 
 Legenda: ⏳ da iniziare · 🔄 in corso · ✅ completata
 
@@ -74,7 +75,7 @@ in Chrome o Edge (serve internet: Three.js è caricato da CDN).
       da mouse, rotella, tastiera e pulsanti "tieni premuto"; inquadrature rapide
       (figura intera, mezza figura, primo piano)
 
-**Come avviare l'app:** doppio clic su `Avvia-Stage.bat` (Windows): avvia il server se serve
+**Come avviare l'app:** doppio clic su `Start-Stage.bat` (Windows): avvia il server se serve
 e apre Stage in Chrome. Per fermarlo, chiudere la finestra "Stage - server".
 In alternativa, dalla cartella `app/`: `npm run dev` e aprire `http://localhost:5173`.
 
@@ -141,18 +142,48 @@ poi **Copia prompt**. I progetti si spostano tra PC e Mac con **Salva…** / **A
 - [x] Il prompt cambia la prima riga in base al soggetto scelto
 - [x] Test in H3 (stesso seed e prompt): tutte le varianti funzionano allo stesso modo; la
       rigidità vista in precedenza non si ripresenta. Resta un'opzione utile, soprattutto in vista
-      del soggetto in movimento (fase 7)
+      del soggetto in movimento (fase 8)
 
-### Fase 5 — Fondamenta
-Prima delle modifiche grosse al cuore dell'interpolazione (fasi 7 e 8).
-- [ ] **Prossima release**: rinominare i file di avvio `Avvia-Stage.bat` → `Start-Stage.bat` e
+### Fase 5 — Fondamenta e interfaccia
+Prima delle modifiche grosse al cuore dell'interpolazione (fasi 8 e 9).
+- [x] **Prossima release**: rinominare i file di avvio `Avvia-Stage.bat` → `Start-Stage.bat` e
       `Avvia-Stage.command` → `Start-Stage.command` (richiesta utente), aggiornando README e PIANO
       e mantenendo il permesso di esecuzione del file macOS
-- [ ] **Annulla / ripeti** (Ctrl+Z / Ctrl+Y) per keyframe, oggetti, preset e impostazioni
-- [ ] **Test automatici** (Vitest) per interpolazione, operazioni di camera, camera a mano, prompt e
+- [x] **Annulla / ripeti** (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z e pulsanti ↶ ↷) per keyframe, oggetti,
+      preset, soggetto, stile e impostazioni della timeline; modifiche ravvicinate raggruppate in un
+      passo; la camera dal vivo è esclusa (conta ciò che è nei keyframe)
+- [x] **Test automatici** (Vitest, 25 test, `npm test`) per interpolazione, operazioni di camera, camera a mano, prompt e
       validazione dei progetti; eseguiti anche nel workflow GitHub prima della pubblicazione
+- [x] **Interfaccia su due pannelli** (richiesta utente: il pannello sinistro è troppo lungo):
+      a sinistra formato, camera e camera a mano; a destra scena e oggetti, soggetto, stile del
+      video guida (e, dalla fase 6, la scena importata da Blender). Sezioni richiudibili
+- [x] **Elevazione della camera** (richiesta utente), tutte e tre le forme:
+      a) in vista regia, linea verticale tratteggiata dalla camera al pavimento con la misura;
+      b) angolo di inclinazione della camera (es. "−12°, guarda in basso") accanto all'altezza;
+      c) campo per scrivere l'altezza esatta della camera
+- [x] **Altezza del soggetto** (richiesta utente): campo/cursore 1,00–2,10 m con valori rapidi
+      (bambino 1,20 · donna 1,65 · uomo 1,78 · alto 1,90); manichino, cilindro e blocco si
+      ridimensionano in proporzione; inquadrature rapide e preset si adattano (il primo piano resta
+      sul volto); salvata nel progetto e, se utile, citata nel prompt
 
-### Fase 6 — Prompt "per LLM"
+### Fase 6 — Import di scene da Blender (richiesta utente)
+Flusso: foto del set → **Blender MCP** ricrea la scena come previz con primitive semplici →
+export GLB → import in Stage, dove si lavora la camera (più intuitiva di quella di Blender).
+- [ ] Import **GLB / glTF** (Blender: *File → Export → glTF 2.0*); unità in metri e assi già
+      compatibili con Stage
+- [ ] Ogni oggetto della scena diventa un oggetto di Stage: selezionabile, spostabile, ruotabile,
+      nascondibile; oppure movimento dell'intera scena come gruppo
+- [ ] Interruttore **colori di Blender / grigio neutro** (il grigio per il video guida)
+- [ ] Scena **incorporata nel `.stage.json`** (file piccoli): un unico file anche tra PC e Mac
+- [ ] **Reimportazione**: sostituisce la scena mantenendo camera, keyframe e soggetto
+- [ ] **Convenzione sui nomi** in Blender: `Stage_Subject` → posizione e orientamento del manichino;
+      `Stage_Camera` → inquadratura di partenza con la stessa focale
+- [ ] Breve guida nel README per il flusso Blender (e indicazioni da dare al Blender MCP)
+- [ ] Test in H3 di uno shot con scena importata (colori e grigio)
+- Alternativa scartata per ora: generare direttamente un progetto Stage dall'LLM, saltando
+  Blender (più fragile e meno comodo da ritoccare)
+
+### Fase 7 — Prompt "per LLM"
 Contesto: il prompt dell'utente (Ref2VA) ha sezioni `subject_definitions`, `summary`,
 `retention_analysis`, `detailed_description`; il testo di Stage finisce in
 "Movement instructions for <Video 1>". Il prompt dell'utente dichiara già che `<Video 1>` guida
@@ -165,7 +196,7 @@ solo camera e ritmo.
 - [ ] Tratto finale fermo ("holds still") indicato solo se dura in modo significativo (es. > 0,3 s)
 - [ ] Verifica sul flusso reale dell'utente (Stage → Gemma → H3)
 
-### Fase 7 — Soggetto in movimento e target agganciato (vitale)
+### Fase 8 — Soggetto in movimento e target agganciato (vitale)
 - [ ] **Keyframe del soggetto** nella timeline (posizione e rotazione), su una traccia separata da
       quella della camera, con le stesse curve
 - [ ] **Target agganciato al soggetto**: punto posizionabile liberamente sul soggetto (testa, petto o
@@ -176,14 +207,14 @@ solo camera e ritmo.
       verificare che il personaggio non "scivoli" e che il movimento venga letto correttamente
 - [ ] Il prompt descrive anche il movimento del soggetto
 
-### Fase 8 — Spline sul percorso della camera
+### Fase 9 — Spline sul percorso della camera
 - [ ] **Maniglie sul percorso** (vista regia): ogni keyframe ha due maniglie trascinabili che curvano
       la traiettoria nello spazio (archi asimmetrici, curve a S, aggiramenti di ostacoli)
 - [ ] Maniglie allineate (movimento senza scatti) o spezzate
 - [ ] Le maniglie si salvano nel progetto; i progetti esistenti restano validi (maniglie automatiche)
 - [ ] Il prompt descrive anche i percorsi curvi
 
-### Fase 9 — Strumenti
+### Fase 10 — Strumenti
 - [ ] **Export di immagini**: fotogramma corrente, primo e ultimo fotogramma, un'immagine per keyframe
 - [ ] **Legenda dei tasti a scomparsa** (richiesta utente)
 - [ ] **Scorciatoie per i solidi**: sposta / ruota / scala / duplica / elimina (richiesta utente)
@@ -191,15 +222,15 @@ solo camera e ritmo.
 - [ ] Preset **dolly zoom** (effetto Vertigo)
 - [ ] Tavola storyboard con i fotogrammi dei keyframe (opzionale)
 
-### Fase 10 — Più personaggi e pose pronte (condizionata)
-Si fa solo se i test della fase 7 mostrano che posa e movimento del soggetto influenzano H3.
+### Fase 11 — Più personaggi e pose pronte (condizionata)
+Si fa solo se i test della fase 8 mostrano che posa e movimento del soggetto influenzano H3.
 - [ ] Fino a **3 soggetti**, ciascuno con nome e colore distinto
 - [ ] **Pose pronte** (in piedi, seduto, cammina, braccia incrociate, indica…), senza cinematica inversa
 - [ ] Prompt multi-soggetto coerente con lo schema dell'utente (`<Subject 1>`, `<Subject 2>`…)
 
 ### Escluse (decise il 2026-10-18)
-- **Cinematica inversa**: eccessiva rispetto al beneficio; sostituita dal soggetto in movimento (fase 7)
-  e dalle pose pronte (fase 10)
+- **Cinematica inversa**: eccessiva rispetto al beneficio; sostituita dal soggetto in movimento (fase 8)
+  e dalle pose pronte (fase 11)
 - **PWA** (app installabile offline): bastano la versione online e l'avvio locale
 - **Immagine di riferimento in sovrapposizione**: il flusso Ref2VA raramente ha un'immagine di partenza
 - **Maniglie sulla curva di velocità**: rimandate, si riconsiderano solo se un test mostra che H3
@@ -210,7 +241,7 @@ Si fa solo se i test della fase 7 mostrano che posa e movimento del soggetto inf
 - [x] Licenza MIT, `.gitignore`, `.gitattributes` (fine riga corretti per gli script di avvio)
 - [x] README in inglese (`README.md`) e italiano (`README.it.md`): funzioni, uso online,
       installazione locale, comandi, struttura, sviluppo
-- [x] Avvio con doppio clic per macOS (`Avvia-Stage.command`); messaggi degli avvii bilingui
+- [x] Avvio con doppio clic per macOS (`Start-Stage.command`, prima `Avvia-Stage.command`); messaggi degli avvii bilingui
 - [x] Workflow GitHub Pages (`.github/workflows/deploy.yml`): build e pubblicazione a ogni push su `main`
       (verificata la build pulita servita in sottocartella, come su Pages)
 - [x] Repository pubblico: https://github.com/aledige63/Stage
@@ -290,3 +321,19 @@ Si fa solo se i test della fase 7 mostrano che posa e movimento del soggetto inf
   sintassi. Ora sono protette con `^`; provato con avvio a freddo: server attivo in 2 s.
   Il difetto è presente nella v0.5.0 pubblicata.
 - **2026-10-19** — Pubblicata la correzione come **v0.5.1**.
+- **2026-10-19** — Aggiunta la fase 6 "Import di scene da Blender" (GLB, oggetti separati, colori o
+  grigio, scena incorporata nel progetto, reimportazione, nomi `Stage_Subject` / `Stage_Camera`),
+  per lavorare la camera su previz create con il Blender MCP. Le fasi successive scalano di un
+  numero (prompt per LLM = 7, soggetto in movimento = 8, spline = 9, strumenti = 10,
+  più personaggi = 11). Nulla pubblicato.
+- **2026-10-19** — In pipeline (fase 5, ora "Fondamenta e interfaccia"): interfaccia su due pannelli
+  (sinistra camera, destra scena/soggetto/stile), elevazione della camera (linea con misura in vista
+  regia, angolo di inclinazione, campo altezza) e altezza del soggetto regolabile. Nulla pubblicato.
+- **2026-10-19** — Fase 5 completata e verificata nel browser (non pubblicata): file di avvio
+  rinominati `Start-Stage.bat` / `Start-Stage.command`; interfaccia su due pannelli con sezioni
+  richiudibili; altezza della camera modificabile, inclinazione e linea con misura in vista regia;
+  altezza del soggetto 1,00–2,10 m (inquadrature, preset e prompt si adattano); annulla/ripeti;
+  25 test automatici, eseguiti anche nel workflow prima della pubblicazione. L'export resta privo
+  di aiuti visivi. Prossima: fase 6 (import da Blender).
+- **2026-10-31** — Interfaccia della fase 5 confermata dall'utente e pubblicata come **v0.6.0**.
+  Prossima: fase 6 (import da Blender).

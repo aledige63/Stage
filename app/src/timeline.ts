@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MANNEQUIN_ID, setState, store, type AppState, type CameraState, type Easing, type Keyframe, type PathMode, type Vec3 } from './store';
+import { MANNEQUIN_ID, setState, store, subjectScale, type AppState, type CameraState, type Easing, type Keyframe, type PathMode, type Vec3 } from './store';
 import { evaluate } from './engine/interpolation';
 
 export const DURATION_MIN = 2;
@@ -174,7 +174,8 @@ interface Shot {
   side?: number;
 }
 
-function shotCamera(subject: Vec3, facing: number, s: Shot): CameraState {
+/** scale = altezza del soggetto / altezza del manichino: altezze e punti mirati seguono il soggetto. */
+function shotCamera(subject: Vec3, facing: number, s: Shot, scale: number): CameraState {
   const a = (facing + s.az) * (Math.PI / 180);
   const side = s.side ?? 0;
   const f = facing * (Math.PI / 180);
@@ -184,8 +185,8 @@ function shotCamera(subject: Vec3, facing: number, s: Shot): CameraState {
   const sx = subject[0] + rx * side;
   const sz = subject[2] + rz * side;
   return {
-    pos: [sx + Math.sin(a) * s.dist, subject[1] + s.height, sz + Math.cos(a) * s.dist],
-    target: [sx, subject[1] + s.targetY, sz],
+    pos: [sx + Math.sin(a) * s.dist, subject[1] + s.height * scale, sz + Math.cos(a) * s.dist],
+    target: [sx, subject[1] + s.targetY * scale, sz],
     roll: 0,
     focal: s.focal,
   };
@@ -238,9 +239,10 @@ export function applyPreset(id: PresetId) {
   const s = store.getState();
   const subject = s.objects.find(o => o.id === MANNEQUIN_ID)!;
   const p = PRESET_SHOTS[id];
+  const k = subjectScale(s);
   const keyframes: Keyframe[] = [
-    { id: newKeyId(), time: 0, camera: shotCamera(subject.pos, subject.rot[1], p.from), easing: p.easing, path: p.path },
-    { id: newKeyId(), time: s.duration, camera: shotCamera(subject.pos, subject.rot[1], p.to), easing: p.easing, path: p.path },
+    { id: newKeyId(), time: 0, camera: shotCamera(subject.pos, subject.rot[1], p.from, k), easing: p.easing, path: p.path },
+    { id: newKeyId(), time: s.duration, camera: shotCamera(subject.pos, subject.rot[1], p.to, k), easing: p.easing, path: p.path },
   ];
   setState({ keyframes, selectedKey: null, playing: false });
   seek(0);
@@ -252,8 +254,7 @@ export function applyPreset(id: PresetId) {
 
 export function bindTimelineShortcuts(signal: AbortSignal) {
   window.addEventListener('keydown', e => {
-    const el = e.target as HTMLElement;
-    if (el.closest('input, textarea, select')) return;
+    if (e.target instanceof Element && e.target.closest('input, textarea, select')) return;
     const s = store.getState();
     switch (e.code) {
       case 'Space': togglePlay(); break;
