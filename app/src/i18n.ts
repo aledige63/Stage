@@ -8,7 +8,7 @@ const it = {
 
   // viste
   'shot.title': 'Vista camera',
-  'shot.hint': 'Sinistro: orbita · Destro: pan/tilt · Centrale: truck/pedestal · Rotella: dolly · Shift+rotella: zoom · Ctrl+rotella: crane · Clic qui per usare la tastiera',
+  'shot.hint': 'Sinistro: orbita · Destro: pan/tilt · Centrale: truck/pedestal · Rotella: dolly · Shift+rotella: zoom · Ctrl+rotella: crane · Alt+rotella: roll · Clic qui per usare la tastiera',
   'dir.title': 'Vista regia',
   'dir.hint': 'Trascina: ruota la vista · Destro: sposta · Rotella: avvicina · Clic su un oggetto: seleziona',
 
@@ -80,6 +80,29 @@ const it = {
   'obj.tone': 'Tono di grigio',
   'obj.delete': 'Elimina oggetto',
 
+  // scena da Blender
+  'blender.title': 'Scena da Blender',
+  'blender.import': 'Importa GLB…',
+  'blender.reimport': 'Reimporta GLB…',
+  'blender.loading': 'Lettura del file…',
+  'blender.done': '{n} oggetti importati.',
+  'blender.doneSubject': ' Manichino messo su Stage_Subject.',
+  'blender.doneCamera': ' Camera messa su Stage_Camera.',
+  'blender.note': 'In Blender: File → Esporta → glTF 2.0 (.glb). Con i nomi Stage_Subject e Stage_Camera il primo import posiziona soggetto e camera. Reimportando restano soggetto, camera e keyframe.',
+  'blender.look': 'Aspetto nel video guida',
+  'blender.gray': 'Grigio neutro',
+  'blender.colors': 'Colori di Blender',
+  'blender.moveAll': 'Sposta tutta (m)',
+  'blender.turnAll': 'Ruota tutta (°)',
+  'blender.remove': 'Rimuovi scena',
+  'blender.tooBig': 'File troppo grande (massimo 100 MB)',
+  'blender.badFile': 'Il file non è un GLB o glTF valido. Un .gltf deve avere tutto incorporato: meglio esportare in .glb',
+  'blender.empty': 'Nel file non ci sono oggetti visibili',
+  'blender.error': 'Import non riuscito: {msg}',
+  'obj.hide': 'Nascondi',
+  'obj.show': 'Mostra',
+  'err.badScene': 'Scena importata non valida',
+
   // stile
   'style.title': 'Stile video guida',
   'style.floor': 'Pavimento',
@@ -133,6 +156,16 @@ const it = {
   'tl.arcTitle': 'Gira attorno al soggetto (orbite)',
   'tl.linear': 'Lineare',
   'tl.linearTitle': 'Linea retta (dolly, truck, crane)',
+  'tl.pan': 'Panoramica',
+  'tl.panTitle': 'La camera ruota su se stessa (pan, tilt)',
+  'tl.left': 'a sinistra',
+  'tl.right': 'a destra',
+  'tl.turnLeft': 'Aggiunge un giro verso sinistra',
+  'tl.turnRight': 'Aggiunge un giro verso destra',
+  'tl.segPan': 'panoramica',
+  'preset.pan90': 'Panoramica 90°',
+  'preset.pan180': 'Panoramica 180°',
+  'preset.pan360': 'Panoramica 360°',
   'tl.update': 'Aggiorna con camera attuale',
   'tl.updateTitle': 'Sostituisce questo keyframe con la camera attuale',
   'tl.delete': 'Elimina',
@@ -206,7 +239,7 @@ const en: Record<TKey, string> = {
   'lang.label': 'Language',
 
   'shot.title': 'Camera view',
-  'shot.hint': 'Left: orbit · Right: pan/tilt · Middle: truck/pedestal · Wheel: dolly · Shift+wheel: zoom · Ctrl+wheel: crane · Click here to use the keyboard',
+  'shot.hint': 'Left: orbit · Right: pan/tilt · Middle: truck/pedestal · Wheel: dolly · Shift+wheel: zoom · Ctrl+wheel: crane · Alt+wheel: roll · Click here to use the keyboard',
   'dir.title': 'Director view',
   'dir.hint': 'Drag: rotate view · Right: pan · Wheel: zoom · Click an object: select',
 
@@ -274,6 +307,28 @@ const en: Record<TKey, string> = {
   'obj.tone': 'Gray tone',
   'obj.delete': 'Delete object',
 
+  'blender.title': 'Scene from Blender',
+  'blender.import': 'Import GLB…',
+  'blender.reimport': 'Reimport GLB…',
+  'blender.loading': 'Reading the file…',
+  'blender.done': '{n} objects imported.',
+  'blender.doneSubject': ' Mannequin placed on Stage_Subject.',
+  'blender.doneCamera': ' Camera placed on Stage_Camera.',
+  'blender.note': 'In Blender: File → Export → glTF 2.0 (.glb). With the names Stage_Subject and Stage_Camera the first import places subject and camera. Reimporting keeps subject, camera and keyframes.',
+  'blender.look': 'Look in the guide video',
+  'blender.gray': 'Neutral gray',
+  'blender.colors': 'Blender colors',
+  'blender.moveAll': 'Move all (m)',
+  'blender.turnAll': 'Rotate all (°)',
+  'blender.remove': 'Remove scene',
+  'blender.tooBig': 'File too large (100 MB maximum)',
+  'blender.badFile': 'The file is not a valid GLB or glTF. A .gltf must have everything embedded: better export as .glb',
+  'blender.empty': 'The file contains no visible objects',
+  'blender.error': 'Import failed: {msg}',
+  'obj.hide': 'Hide',
+  'obj.show': 'Show',
+  'err.badScene': 'Invalid imported scene',
+
   'style.title': 'Guide video style',
   'style.floor': 'Floor',
   'grid.marcata': 'Bold grid',
@@ -325,6 +380,16 @@ const en: Record<TKey, string> = {
   'tl.arcTitle': 'Circles around the subject (orbits)',
   'tl.linear': 'Linear',
   'tl.linearTitle': 'Straight line (dolly, truck, crane)',
+  'tl.pan': 'Pan',
+  'tl.panTitle': 'The camera rotates in place (pan, tilt)',
+  'tl.left': 'left',
+  'tl.right': 'right',
+  'tl.turnLeft': 'Adds a full turn to the left',
+  'tl.turnRight': 'Adds a full turn to the right',
+  'tl.segPan': 'pan',
+  'preset.pan90': 'Pan 90°',
+  'preset.pan180': 'Pan 180°',
+  'preset.pan360': 'Pan 360°',
   'tl.update': 'Update with current camera',
   'tl.updateTitle': 'Replaces this keyframe with the current camera',
   'tl.delete': 'Delete',
@@ -422,6 +487,7 @@ export function setLang(lang: Lang) {
 
 /** Nome visualizzato di un oggetto, nella lingua corrente ("Cubo 2" → "Cube 2"). */
 export function objectLabel(o: SceneObject): string {
+  if (o.kind === 'importato') return o.name;
   const base = t(`kind.${o.kind}` as TKey);
   if (o.kind === 'manichino') return base;
   const n = /(\d+)$/.exec(o.name)?.[1];

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MANNEQUIN_ID, setState, store, subjectScale, type AppState, type CameraState, type Easing, type Keyframe, type PathMode, type Vec3 } from './store';
-import { evaluate } from './engine/interpolation';
+import { evaluate, panDelta } from './engine/interpolation';
+import { pan } from './engine/cameraOps';
 
 export const DURATION_MIN = 2;
 export const DURATION_MAX = 15;
@@ -113,7 +114,8 @@ export function setKeyframe() {
     time,
     camera: s.camera,
     easing: prev?.easing ?? 'inout',
-    path: prev?.path ?? 'arc',
+    // la panoramica non si eredita: un nuovo tratto con la camera ferma lo diventa da solo
+    path: prev && prev.path !== 'pan' ? prev.path : 'arc',
   };
   setFromTimeline({ keyframes: sortKeys([...s.keyframes, key]), selectedKey: key.id, dirty: false });
 }
@@ -159,9 +161,12 @@ export function setFps(fps: number) {
 // Preset di movimento (costruiti attorno al manichino, rispettando dove guarda)
 // ---------------------------------------------------------------------------
 
-export type PresetId = 'orbita90' | 'orbita180' | 'push' | 'pull' | 'crane' | 'arcpush' | 'truck' | 'zoom';
+export type PanPresetId = 'pan90' | 'pan180' | 'pan360';
+export type PresetId = PanPresetId | 'orbita90' | 'orbita180' | 'push' | 'pull' | 'crane' | 'arcpush' | 'truck' | 'zoom';
 
-export const PRESETS: PresetId[] = ['orbita90', 'orbita180', 'push', 'pull', 'crane', 'arcpush', 'truck', 'zoom'];
+export const PRESETS: PresetId[] = ['orbita90', 'orbita180', 'pan90', 'pan180', 'pan360', 'push', 'pull', 'crane', 'arcpush', 'truck', 'zoom'];
+
+const PAN_DEGREES: Record<PanPresetId, number> = { pan90: 90, pan180: 180, pan360: 360 };
 
 interface Shot {
   /** angolo attorno al soggetto in gradi, 0 = davanti, positivo = alla sua sinistra (destra di inquadratura) */
@@ -192,7 +197,7 @@ function shotCamera(subject: Vec3, facing: number, s: Shot, scale: number): Came
   };
 }
 
-const PRESET_SHOTS: Record<PresetId, { from: Shot; to: Shot; easing: Easing; path: PathMode }> = {
+const PRESET_SHOTS: Record<Exclude<PresetId, PanPresetId>, { from: Shot; to: Shot; easing: Easing; path: PathMode }> = {
   orbita90: {
     from: { az: -45, dist: 4, height: 1.5, targetY: 1.1, focal: 35 },
     to: { az: 45, dist: 4, height: 1.5, targetY: 1.1, focal: 35 },
@@ -235,7 +240,25 @@ const PRESET_SHOTS: Record<PresetId, { from: Shot; to: Shot; easing: Easing; pat
   },
 };
 
+/** Panoramica verso destra dalla posizione e dall'inquadratura attuali della camera. */
+function applyPanPreset(id: PanPresetId) {
+  const s = store.getState();
+  const want = -PAN_DEGREES[id] * (Math.PI / 180);
+  const end = pan(s.camera, want);
+  const extraTurns = Math.round((want - panDelta(s.camera, end)) / (Math.PI * 2));
+  const keyframes: Keyframe[] = [
+    { id: newKeyId(), time: 0, camera: s.camera, easing: 'inout', path: 'pan', extraTurns },
+    { id: newKeyId(), time: s.duration, camera: end, easing: 'inout', path: 'arc' },
+  ];
+  setState({ keyframes, selectedKey: null, playing: false });
+  seek(0);
+}
+
 export function applyPreset(id: PresetId) {
+  if (id === 'pan90' || id === 'pan180' || id === 'pan360') {
+    applyPanPreset(id);
+    return;
+  }
   const s = store.getState();
   const subject = s.objects.find(o => o.id === MANNEQUIN_ID)!;
   const p = PRESET_SHOTS[id];

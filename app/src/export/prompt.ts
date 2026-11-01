@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FILM_GAUGE } from '../engine/cameraOps';
+import { panDelta } from '../engine/interpolation';
 import { MANNEQUIN_ID, subjectScale, type AppState, type CameraState, type Easing, type Keyframe } from '../store';
 
 // Descrive in inglese il movimento della timeline, tratto per tratto, per accompagnare
@@ -76,7 +77,7 @@ function describeSegment(a: Keyframe, b: Keyframe, s: Subject): string {
 
   // orbita attorno al soggetto
   const dAz = wrap(azimuth(B, s) - azimuth(A, s));
-  if (Math.abs(dAz) > 15 && moved > 0.3) {
+  if (Math.abs(dAz) > 15 && moved > 0.3 && a.path !== 'pan') {
     // azimut crescente = la camera va verso la sua destra
     parts.push(`orbits ${Math.round(Math.abs(dAz))} degrees around the subject, moving to the ${dAz > 0 ? 'right' : 'left'}`);
   }
@@ -107,12 +108,12 @@ function describeSegment(a: Keyframe, b: Keyframe, s: Subject): string {
   }
 
   // pan / tilt con camera quasi ferma
-  if (moved < 0.3) {
+  if (moved < 0.3 || a.path === 'pan') {
     const dA = v(A.target).sub(PA).normalize();
     const dB = v(B.target).sub(PB).normalize();
-    const yaw = wrap((Math.atan2(dB.x, dB.z) - Math.atan2(dA.x, dA.z)) * RAD);
+    const yaw = panDelta(A, B, a.extraTurns) * RAD;
     const pitch = (Math.asin(dB.y) - Math.asin(dA.y)) * RAD;
-    if (Math.abs(yaw) > 8) parts.push(`pans ${yaw > 0 ? 'left' : 'right'} ${Math.round(Math.abs(yaw))} degrees`);
+    if (Math.abs(yaw) > 8) parts.push(`${moved < 0.01 ? 'stays fixed in place and ' : ''}pans ${yaw > 0 ? 'left' : 'right'} ${Math.round(Math.abs(yaw))} degrees`);
     if (Math.abs(pitch) > 6) parts.push(`tilts ${pitch > 0 ? 'up' : 'down'} ${Math.round(Math.abs(pitch))} degrees`);
   }
 
@@ -124,7 +125,7 @@ function describeSegment(a: Keyframe, b: Keyframe, s: Subject): string {
   // roll
   const dRoll = B.roll - A.roll;
   if (Math.abs(dRoll) > 5) {
-    parts.push(Math.abs(B.roll) < 2 ? 'rolls back to a level horizon' : `rolls to a ${Math.round(Math.abs(B.roll))}-degree dutch angle`);
+    parts.push(Math.abs(dRoll) >= 300 ? `performs a ${Math.round(Math.abs(dRoll))}-degree barrel roll around the lens axis` : Math.abs(B.roll) < 2 ? 'rolls back to a level horizon' : `rolls to a ${Math.round(Math.abs(B.roll))}-degree dutch angle`);
   }
 
   if (!parts.length) return 'the camera stays almost static';
@@ -149,6 +150,9 @@ export function generatePrompt(s: AppState): string {
     nessuno: 'the reference video shows only a floor grid and reference columns as a spatial guide, which must not appear',
   }[s.style.subject];
   lines.push(`Follow exactly the camera movement of the reference video; ${guide}.`);
+  if (s.objects.some(o => o.kind === 'importato' && !o.hidden)) {
+    lines.push('The simple 3D blocks in the reference video only mark the layout of the environment and must not appear literally.');
+  }
   lines.push(`${s.aspect === '16:9' ? 'Horizontal 16:9' : 'Vertical 9:16'} framing, ${s.duration} seconds.`);
   lines.push(`Opening frame: ${shotSize(first, aspect, subjectScale(s))} of the subject, ${sideDesc(first, subject)}, ${angleDesc(first)}, ${Math.round(first.focal)}mm lens${Math.abs(first.roll) > 3 ? `, ${Math.round(Math.abs(first.roll))}-degree dutch angle` : ''}.`);
 

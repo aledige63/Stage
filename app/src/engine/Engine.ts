@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import { MANNEQUIN_ID, subjectScale, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject } from '../store';
-import { applyToCamera, aspectValue, crane, distance, dolly, orbit, pan, pedestal, step, tilt, truck, zoom } from './cameraOps';
+import { MANNEQUIN_ID, subjectScale, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject, type StyleState } from '../store';
+import { applyToCamera, aspectValue, crane, distance, dolly, orbit, pan, pedestal, roll, step, tilt, truck, zoom } from './cameraOps';
 import { buildEnvironment, MANNEQUIN_COLORS } from './environment';
 import { buildMannequin } from './mannequin';
 import { held, KEYMAP } from './input';
 import { samplePath } from './interpolation';
 import { handheldShake, type Shake } from './handheld';
+import { parseScene } from './blenderImport';
 import { advance, bindTimelineShortcuts, pause } from '../timeline';
 import { bindHistoryShortcuts } from '../history';
 
@@ -40,7 +41,7 @@ function makeRenderer(canvas: HTMLCanvasElement) {
   return r;
 }
 
-function makePrimitive(kind: Exclude<ObjectKind, 'manichino'>): THREE.Mesh {
+function makePrimitive(kind: Exclude<ObjectKind, 'manichino' | 'importato'>): THREE.Mesh {
   const geo = {
     cubo: () => new THREE.BoxGeometry(1, 1, 1),
     sfera: () => new THREE.SphereGeometry(0.5, 48, 24),
@@ -50,6 +51,27 @@ function makePrimitive(kind: Exclude<ObjectKind, 'manichino'>): THREE.Mesh {
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.8 }));
   mesh.castShadow = mesh.receiveShadow = true;
   return mesh;
+}
+
+/** Materiali originali di Blender o grigio neutro, con il tono dell'oggetto. */
+function applySceneLook(node: THREE.Object3D, tone: number, look: StyleState['sceneLook']) {
+  node.traverse(c => {
+    const mesh = c as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.original ??= mesh.material;
+    mesh.userData.gray ??= new THREE.MeshStandardMaterial({ roughness: 0.85, side: THREE.DoubleSide });
+    const gray = mesh.userData.gray as THREE.MeshStandardMaterial;
+    const g = 0.15 + tone * 0.8;
+    gray.color.setRGB(g, g, g, THREE.SRGBColorSpace);
+    mesh.material = look === 'grigio' ? gray : mesh.userData.original;
+  });
+}
+
+/** Un raggio colpisce anche ciò che è nascosto: conta solo quel che si vede. */
+function isShown(o: THREE.Object3D | null) {
+  for (; o; o = o.parent) if (!o.visible) return false;
+  return true;
 }
 
 /**
@@ -85,6 +107,10 @@ export class Engine {
   private env: THREE.Group | null = null;
   private nodes = new Map<string, THREE.Object3D>();
   private mannMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
+  // scena importata: si sposta e ruota tutta insieme
+  private blenderRoot = new THREE.Group();
+  private blenderRoots: THREE.Object3D[] | null = null;
+  private blenderId: string | null = null;
 
   private els: EngineElements;
   private abort = new AbortController();
@@ -171,6 +197,8 @@ export class Engine {
       this.heightLine, this.heightLabel);
     this.scene.add(this.helpers);
 
+    this.scene.add(this.blenderRoot);
+    this.syncBlender(s);
     this.syncObjects(s);
     this.rebuildPath(s);
     this.bindShotInput();
@@ -189,6 +217,7 @@ export class Engine {
 
   dispose() {
     if (currentEngine === this) currentEngine = null;
+    this.blenderId = null;
     cancelAnimationFrame(this.raf);
     this.abort.abort();
     this.unsubscribe();
@@ -209,7 +238,8 @@ export class Engine {
       this.env = buildEnvironment(this.scene, s.style, this.env);
       this.mannMat.color.set(MANNEQUIN_COLORS[s.style.mann]);
     }
-    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo || s.subjectHeight !== prev.subjectHeight) {
+    if (s.blenderScene !== prev.blenderScene) this.syncBlender(s);
+    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo || s.subjectHeight !== prev.subjectHeight || s.style !== prev.style) {
       this.syncObjects(s);
     }
     if (s.aspect !== prev.aspect) this.layout();
@@ -238,30 +268,60 @@ export class Engine {
     }
   }
 
+  private syncBlender(s: AppState) {
+    const b = s.blenderScene;
+    this.blenderRoot.position.set(...(b?.offset ?? [0, 0, 0]));
+    this.blenderRoot.rotation.y = (b?.yaw ?? 0) * DEG;
+    const id = b?.glb ? b.id : null;
+    if (id === this.blenderId) return;
+    this.blenderId = id;
+    this.blenderRoots = null;
+    if (!id) return;
+    parseScene(id, b!.glb).then(parsed => {
+      if (this.blenderId !== id) return;
+      this.blenderRoots = parsed.roots;
+      this.syncObjects(store.getState());
+    }).catch(err => console.error(err));
+  }
+
   private syncObjects(s: AppState) {
     const ids = new Set(s.objects.map(o => o.id));
     for (const [id, node] of this.nodes) {
       if (ids.has(id)) continue;
       if (this.gizmo.object === node) this.gizmo.detach();
-      this.scene.remove(node);
+      node.removeFromParent();
+      this.nodes.delete(id);
+      // gli oggetti importati restano disponibili per annulla/ripeti
+      if (node.userData.imported) continue;
       const mesh = node as THREE.Mesh;
       mesh.geometry?.dispose();
       (mesh.material as THREE.Material | undefined)?.dispose();
-      this.nodes.delete(id);
     }
 
     for (const o of s.objects) {
       let node = this.nodes.get(o.id);
       if (!node) {
-        node = o.kind === 'manichino' ? buildMannequin(this.mannMat) : makePrimitive(o.kind);
+        if (o.kind === 'importato') {
+          // il file è ancora in lettura: l'oggetto arriverà alla fine di syncBlender
+          node = this.blenderRoots?.[o.source ?? -1];
+          if (!node) continue;
+          node.userData.imported = true;
+          this.blenderRoot.add(node);
+        } else {
+          node = o.kind === 'manichino' ? buildMannequin(this.mannMat) : makePrimitive(o.kind);
+          this.scene.add(node);
+        }
         node.userData.id = o.id;
-        this.scene.add(node);
         this.nodes.set(o.id, node);
       }
+      node.visible = !o.hidden;
       node.position.set(...o.pos);
       node.rotation.set(o.rot[0] * DEG, o.rot[1] * DEG, o.rot[2] * DEG);
       if (o.kind === 'manichino') {
         node.scale.setScalar(subjectScale(s));
+      } else if (o.kind === 'importato') {
+        node.scale.set(...o.scale);
+        applySceneLook(node, o.tone, s.style.sceneLook);
       } else {
         node.scale.set(...o.scale);
         const g = 0.15 + o.tone * 0.8;
@@ -345,7 +405,8 @@ export class Engine {
       pause();
       const c = cam();
       const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100);
-      if (e.shiftKey || e.altKey) setCam(zoom(c, -delta * 0.002));
+      if (e.altKey) setCam(roll(c, delta * 0.03));
+      else if (e.shiftKey) setCam(zoom(c, -delta * 0.002));
       else if (e.ctrlKey) setCam(crane(c, -delta * 0.004));
       else setCam(dolly(c, -delta * 0.0015 * Math.max(1, distance(c))));
     }, { signal, passive: false });
@@ -394,7 +455,7 @@ export class Engine {
         -((e.clientY - rect.top) / rect.height) * 2 + 1,
       );
       raycaster.setFromCamera(ndc, this.dirCam);
-      const hit = raycaster.intersectObjects([...this.nodes.values()], true)[0];
+      const hit = raycaster.intersectObjects([...this.nodes.values()], true).find(h => isShown(h.object));
       let obj: THREE.Object3D | null = hit?.object ?? null;
       while (obj && obj.userData.id === undefined) obj = obj.parent;
       setState({ selectedId: (obj?.userData.id as string | undefined) ?? null });

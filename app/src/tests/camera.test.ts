@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  crane, distance, dolly, frame, MIN_DISTANCE, orbit, pan, pedestal, pitchDegrees, setHeight, tilt, truck, zoom,
+  crane, distance, dolly, frame, MIN_DISTANCE, orbit, pan, pedestal, pitchDegrees, roll, setHeight, tilt, truck, zoom,
   FOCAL_MAX, FOCAL_MIN,
 } from '../engine/cameraOps';
-import { EASE, evaluate, interpolate, samplePath } from '../engine/interpolation';
+import { EASE, evaluate, interpolate, panDelta, samplePath } from '../engine/interpolation';
 import { handheldShake } from '../engine/handheld';
 import type { CameraState, Keyframe } from '../store';
 
@@ -125,5 +125,35 @@ describe('camera a mano', () => {
       expect(Math.abs(s.yaw)).toBeLessThan(0.03);
       expect(Math.abs(s.y)).toBeLessThan(0.03);
     }
+  });
+});
+
+describe('panoramica', () => {
+  const end = pan(cam, -Math.PI / 2);
+
+  it('la camera resta ferma qualunque sia il percorso del tratto', () => {
+    for (const path of ['arc', 'linear', 'pan'] as const) {
+      for (const e of [0.25, 0.5, 0.75]) expect(interpolate(cam, end, e, path).pos).toEqual(cam.pos);
+    }
+  });
+
+  it('ruota a velocità uniforme e arriva alla posa finale', () => {
+    const half = interpolate(cam, end, 0.5, 'pan');
+    near(panDelta(cam, half), panDelta(cam, end) / 2, 1e-9);
+    interpolate(cam, end, 1, 'pan').target.forEach((x, i) => near(x, end.target[i], 1e-9));
+  });
+
+  it('i giri in più permettono rotazioni oltre 180 gradi', () => {
+    near(panDelta(cam, cam, -1), -Math.PI * 2);
+    const half = interpolate(cam, cam, 0.5, 'pan', -1);
+    near(half.target[2], cam.pos[2] + distance(cam) * Math.cos(pitchDegrees(cam) * Math.PI / 180), 1e-9);
+    interpolate(cam, cam, 1, 'pan', -1).target.forEach((x, i) => near(x, cam.target[i], 1e-9));
+  });
+});
+
+describe('roll', () => {
+  it('arriva a un giro completo e si interpola oltre 90 gradi', () => {
+    expect(roll(cam, 1000).roll).toBe(360);
+    near(interpolate(cam, { ...cam, roll: 360 }, 0.5, 'linear').roll, 180);
   });
 });

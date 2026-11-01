@@ -4,6 +4,22 @@ All notable changes to Stage are listed here. Versions follow MAJOR.MINOR.PATCH.
 Tutte le modifiche rilevanti di Stage sono elencate qui (in inglese; il diario di sviluppo in
 italiano è in [PIANO.md](PIANO.md)).
 
+## [0.7.0] — 2026-11-01
+
+### Added
+- **Scenes from Blender**: import GLB/glTF files as separate objects that can be moved, rotated,
+  scaled or hidden, or moved together; neutral gray or Blender colors in the guide video; file embedded
+  in the project; reimport keeps subject, camera and keyframes; `Stage_Subject` and `Stage_Camera`
+  place the mannequin and the starting view. The prompt mentions the set blocks when they are visible.
+- **Pan path** in the timeline, with extra full turns for rotations beyond 180°, and pan 90°/180°/360°
+  presets starting from the current camera.
+- **Roll** up to ±360° (barrel roll) and Alt + wheel to control it.
+
+### Fixed
+- **Pans between keyframes**: the camera drifted on arc paths and rotated unevenly on linear ones. Two
+  keyframes at the same position now always rotate in place at an even rate.
+- **Overlays** are now dark on the light background, where they were hard to see.
+
 ## [0.6.0] — 2026-10-31
 
 ### Added

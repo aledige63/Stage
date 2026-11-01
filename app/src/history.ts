@@ -8,7 +8,7 @@ import { seek } from './timeline';
 // che è salvato nei keyframe.
 
 const DOC_KEYS = [
-  'keyframes', 'objects', 'style', 'handheld', 'subjectHeight', 'duration', 'fps', 'aspect', 'loop',
+  'keyframes', 'objects', 'blenderScene', 'style', 'handheld', 'subjectHeight', 'duration', 'fps', 'aspect', 'loop',
 ] as const;
 
 type Doc = Pick<AppState, (typeof DOC_KEYS)[number]>;

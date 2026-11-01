@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { setState, store, useApp, type Easing, type Keyframe } from '../store';
-import { EASING_LABELS } from '../engine/interpolation';
+import { EASING_LABELS, panDelta, segmentPath } from '../engine/interpolation';
 import {
   applyPreset, clearKeyframes, deleteKeyframe, DURATION_MAX, DURATION_MIN, FPS_OPTIONS, jumpKey, pause, PRESETS, seek,
   setDuration, setFps, setKeyframe, togglePlay, updateKeyframe, type PresetId,
@@ -52,15 +52,16 @@ function Track() {
       ))}
       {keyframes.slice(0, -1).map((k, i) => {
         const next = keyframes[i + 1];
+        const path = segmentPath(k.camera, next.camera, k.path);
         return (
           <div
             key={k.id + '-seg'}
             className={`tl-seg ${k.easing}`}
             style={{ left: pct(k.time), width: pct(next.time - k.time) }}
-            title={`${EASING_LABELS[k.easing]} · ${k.path === 'arc' ? t('tl.segArc') : t('tl.segLinear')}`}
+            title={`${EASING_LABELS[k.easing]} · ${path === 'pan' ? t('tl.segPan') : path === 'arc' ? t('tl.segArc') : t('tl.segLinear')}`}
             onPointerDown={() => setState({ selectedKey: k.id })}
           >
-            <span>{EASING_LABELS[k.easing]}{k.path === 'arc' ? ' ⌒' : ''}</span>
+            <span>{EASING_LABELS[k.easing]}{path === 'pan' ? ' ⟳' : path === 'arc' ? ' ⌒' : ''}</span>
           </div>
         );
       })}
@@ -85,6 +86,12 @@ function KeyEditor({ k }: { k: Keyframe }) {
   const keyframes = useApp(s => s.keyframes);
   const t = useT();
   const isLast = keyframes[keyframes.length - 1]?.id === k.id;
+  const next = keyframes[keyframes.findIndex(x => x.id === k.id) + 1];
+  const path = next ? segmentPath(k.camera, next.camera, k.path) : k.path;
+  // camera ferma: può essere solo una panoramica
+  const fixed = next ? segmentPath(k.camera, next.camera, 'arc') === 'pan' : false;
+  const turn = next ? (panDelta(k.camera, next.camera, k.extraTurns) * 180) / Math.PI : 0;
+  const addTurn = (n: number) => updateKeyframe(k.id, { extraTurns: (k.extraTurns ?? 0) + n });
   return (
     <div className="tl-editor">
       <b>◆ {k.time.toFixed(2)} s</b>
@@ -100,9 +107,19 @@ function KeyEditor({ k }: { k: Keyframe }) {
           </div>
           <span className="muted">{t('tl.path')}</span>
           <div className="seg">
-            <button className={k.path === 'arc' ? 'on' : ''} onClick={() => updateKeyframe(k.id, { path: 'arc' })} title={t('tl.arcTitle')}>{t('tl.arc')}</button>
-            <button className={k.path === 'linear' ? 'on' : ''} onClick={() => updateKeyframe(k.id, { path: 'linear' })} title={t('tl.linearTitle')}>{t('tl.linear')}</button>
+            <button className={path === 'arc' ? 'on' : ''} disabled={fixed} onClick={() => updateKeyframe(k.id, { path: 'arc' })} title={t('tl.arcTitle')}>{t('tl.arc')}</button>
+            <button className={path === 'linear' ? 'on' : ''} disabled={fixed} onClick={() => updateKeyframe(k.id, { path: 'linear' })} title={t('tl.linearTitle')}>{t('tl.linear')}</button>
+            <button className={path === 'pan' ? 'on' : ''} onClick={() => updateKeyframe(k.id, { path: 'pan' })} title={t('tl.panTitle')}>{t('tl.pan')}</button>
           </div>
+          {path === 'pan' && (
+            <>
+              <span className="muted">{Math.round(Math.abs(turn))}° {turn > 0 ? t('tl.left') : t('tl.right')}</span>
+              <div className="seg">
+                <button onClick={() => addTurn(1)} title={t('tl.turnLeft')}>◀ 360°</button>
+                <button onClick={() => addTurn(-1)} title={t('tl.turnRight')}>360° ▶</button>
+              </div>
+            </>
+          )}
         </>
       )}
       <span className="spacer" />

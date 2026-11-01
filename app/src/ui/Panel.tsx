@@ -1,13 +1,14 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   addPrimitive, DEFAULT_CAMERA, MANNEQUIN_ID, removeObject, setCamera, setState, setStyle, store, subjectScale,
   SUBJECT_HEIGHT_MAX, SUBJECT_HEIGHT_MIN, updateObject, useApp,
-  type PrimitiveKind, type SceneObject, type SubjectMode, type Vec3,
+  type BlenderScene, type PrimitiveKind, type SceneObject, type SubjectMode, type Vec3,
 } from '../store';
 import {
-  distance, FOCAL_MAX, FOCAL_MIN, frame, MIN_HEIGHT, pitchDegrees, setHeight, type Action, type Framing,
+  distance, FOCAL_MAX, FOCAL_MIN, frame, MIN_HEIGHT, pitchDegrees, ROLL_MAX, setHeight, type Action, type Framing,
 } from '../engine/cameraOps';
 import { press, release } from '../engine/input';
+import { importBlenderFile, removeBlenderScene } from '../engine/blenderImport';
 import { objectLabel, useT, type TKey } from '../i18n';
 
 function Seg<T extends string | number>({ value, options, onChange, disabled }: {
@@ -161,7 +162,7 @@ function CameraSection() {
       </div>
       <label className="field">
         <span>{t('cam.roll')} <output>{camera.roll.toFixed(0)}°</output></span>
-        <input type="range" min={-45} max={45} step={0.5} value={camera.roll}
+        <input type="range" min={-ROLL_MAX} max={ROLL_MAX} step={1} value={camera.roll}
           onChange={e => setCamera({ roll: Number(e.target.value) })} />
       </label>
 
@@ -237,11 +238,59 @@ function SceneSection() {
       <ul className="objects">
         {objects.map(o => (
           <li key={o.id} className={o.id === selectedId ? 'on' : ''} onClick={() => setState({ selectedId: o.id === selectedId ? null : o.id })}>
-            {objectLabel(o)}
+            <span className={o.hidden ? 'obj-name off' : 'obj-name'}>{objectLabel(o)}</span>
+            {o.id !== MANNEQUIN_ID && (
+              <button className="obj-eye" title={t(o.hidden ? 'obj.show' : 'obj.hide')} aria-label={t(o.hidden ? 'obj.show' : 'obj.hide')}
+                onClick={e => { e.stopPropagation(); updateObject(o.id, { hidden: !o.hidden || undefined }); }}>
+                {o.hidden ? '○' : '●'}
+              </button>
+            )}
           </li>
         ))}
       </ul>
       {selected ? <ObjectEditor obj={selected} /> : <p className="note">{t('scene.selectHint')}</p>}
+    </Section>
+  );
+}
+
+function BlenderSection() {
+  const scene = useApp(s => s.blenderScene);
+  const look = useApp(s => s.style.sceneLook);
+  const [status, setStatus] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  const t = useT();
+  const patch = (p: Partial<BlenderScene>) => setState(s => ({ blenderScene: s.blenderScene && { ...s.blenderScene, ...p } }));
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    setStatus(t('blender.loading'));
+    try {
+      const r = await importBlenderFile(file);
+      setStatus(t('blender.done', { n: r.objects }) + (r.subject ? t('blender.doneSubject') : '') + (r.camera ? t('blender.doneCamera') : ''));
+    } catch (err) {
+      setStatus(t('blender.error', { msg: (err as Error).message }));
+    }
+  };
+
+  return (
+    <Section id="blender" title={t('blender.title')}>
+      <input ref={input} type="file" accept=".glb,.gltf" hidden aria-label={t('blender.import')}
+        onChange={e => { void onFile(e.target.files?.[0]); e.target.value = ''; }} />
+      <button className="wide" onClick={() => input.current?.click()}>{t(scene ? 'blender.reimport' : 'blender.import')}</button>
+      {status && <p className="note">{status}</p>}
+      {scene ? (
+        <>
+          <p className="note">{scene.fileName} · {(scene.bytes / 1048576).toFixed(2)} MB</p>
+          <h3>{t('blender.look')}</h3>
+          <Seg value={look} options={[['grigio', t('blender.gray')], ['colori', t('blender.colors')]]} onChange={sceneLook => setStyle({ sceneLook })} />
+          <Vec3Fields label={t('blender.moveAll')} value={scene.offset} step={0.1} onChange={offset => patch({ offset })} />
+          <div className="vec">
+            <span className="vec-label">{t('blender.turnAll')}</span>
+            <NumField label="Y" value={scene.yaw} step={5} onChange={yaw => patch({ yaw })} />
+          </div>
+          <button className="wide danger" onClick={removeBlenderScene}>{t('blender.remove')}</button>
+        </>
+      ) : <p className="note">{t('blender.note')}</p>}
     </Section>
   );
 }
@@ -381,6 +430,7 @@ export function RightPanel() {
   return (
     <aside className="panel right">
       <SubjectSection />
+      <BlenderSection />
       <SceneSection />
       <StyleSection />
     </aside>

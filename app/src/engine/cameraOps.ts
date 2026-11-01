@@ -12,6 +12,7 @@ export const MIN_HEIGHT = 0.05;
 export const FOCAL_MIN = 12;
 export const FOCAL_MAX = 200;
 export const FILM_GAUGE = 36; // full frame
+export const ROLL_MAX = 360; // gradi: permette un giro completo (barrel roll)
 
 const v = (a: Vec3) => new THREE.Vector3(a[0], a[1], a[2]);
 const arr = (x: THREE.Vector3): Vec3 => [x.x, x.y, x.z];
@@ -92,7 +93,7 @@ export function tilt(c: CameraState, a: number): CameraState {
 }
 
 export function roll(c: CameraState, degrees: number): CameraState {
-  return { ...c, roll: clamp(c.roll + degrees, -90, 90) };
+  return { ...c, roll: clamp(c.roll + degrees, -ROLL_MAX, ROLL_MAX) };
 }
 
 /** Zoom ottico: cambia solo la focale. k>0 = zoom in (scala logaritmica). */

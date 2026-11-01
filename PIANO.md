@@ -18,8 +18,8 @@ Versione attuale: **v0.6.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
 | 4 | Export MP4, prompt testuale, progetto JSON | ✅ Completata |
 | — | Interfaccia IT/EN, pubblicazione GitHub, soggetto nel video guida | ✅ Completata (v0.5.0) |
 | 5 | Fondamenta e interfaccia: annulla/ripeti, test, pannello destro, misure camera e soggetto | ✅ Completata (v0.6.0) |
-| 6 | Import di scene da Blender (GLB) | 🔄 Prossima |
-| 7 | Prompt "per LLM" (blocco camera compatto) | ⏳ Da iniziare |
+| 6 | Import di scene da Blender (GLB) | ✅ Completata (v0.7.0) |
+| 7 | Prompt "per LLM" (blocco camera compatto) | 🔄 Prossima |
 | 8 | Soggetto in movimento e target agganciato al soggetto | ⏳ Da iniziare |
 | 9 | Spline sul percorso della camera | ⏳ Da iniziare |
 | 10 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
@@ -90,7 +90,7 @@ In alternativa, dalla cartella `app/`: `npm run dev` e aprire `http://localhost:
 | Crane | T / G | Ctrl + rotella |
 | Pan | J / L | trascina con il tasto destro |
 | Tilt | I / K | trascina con il tasto destro |
-| Roll | U / O | — |
+| Roll | U / O | Alt + rotella |
 | Zoom | Z / X | Shift + rotella |
 
 ### Fase 2 — Timeline e keyframe
@@ -169,16 +169,16 @@ Prima delle modifiche grosse al cuore dell'interpolazione (fasi 8 e 9).
 ### Fase 6 — Import di scene da Blender (richiesta utente)
 Flusso: foto del set → **Blender MCP** ricrea la scena come previz con primitive semplici →
 export GLB → import in Stage, dove si lavora la camera (più intuitiva di quella di Blender).
-- [ ] Import **GLB / glTF** (Blender: *File → Export → glTF 2.0*); unità in metri e assi già
+- [x] Import **GLB / glTF** (Blender: *File → Export → glTF 2.0*); unità in metri e assi già
       compatibili con Stage
-- [ ] Ogni oggetto della scena diventa un oggetto di Stage: selezionabile, spostabile, ruotabile,
-      nascondibile; oppure movimento dell'intera scena come gruppo
-- [ ] Interruttore **colori di Blender / grigio neutro** (il grigio per il video guida)
-- [ ] Scena **incorporata nel `.stage.json`** (file piccoli): un unico file anche tra PC e Mac
-- [ ] **Reimportazione**: sostituisce la scena mantenendo camera, keyframe e soggetto
-- [ ] **Convenzione sui nomi** in Blender: `Stage_Subject` → posizione e orientamento del manichino;
+- [x] Ogni oggetto della scena diventa un oggetto di Stage: selezionabile, spostabile, ruotabile,
+      nascondibile; in più movimento dell'intera scena come gruppo
+- [x] Interruttore **colori di Blender / grigio neutro** (il grigio per il video guida)
+- [x] Scena **incorporata nel `.stage.json`** (file piccoli): un unico file anche tra PC e Mac
+- [x] **Reimportazione**: sostituisce la scena mantenendo camera, keyframe e soggetto
+- [x] **Convenzione sui nomi** in Blender: `Stage_Subject` → posizione e orientamento del manichino;
       `Stage_Camera` → inquadratura di partenza con la stessa focale
-- [ ] Breve guida nel README per il flusso Blender (e indicazioni da dare al Blender MCP)
+- [x] Breve guida nel README per il flusso Blender (e indicazioni da dare al Blender MCP)
 - [ ] Test in H3 di uno shot con scena importata (colori e grigio)
 - Alternativa scartata per ora: generare direttamente un progetto Stage dall'LLM, saltando
   Blender (più fragile e meno comodo da ritoccare)
@@ -337,3 +337,13 @@ Si fa solo se i test della fase 8 mostrano che posa e movimento del soggetto inf
   di aiuti visivi. Prossima: fase 6 (import da Blender).
 - **2026-10-31** — Interfaccia della fase 5 confermata dall'utente e pubblicata come **v0.6.0**.
   Prossima: fase 6 (import da Blender).
+- **2026-11-01** — Corretta la panoramica tra keyframe (la camera si spostava con Arco e ruotava in modo
+  irregolare con Lineare): percorso "Panoramica" riconosciuto da solo a camera ferma, giri oltre 180°,
+  preset 90/180/360. Roll fino a ±360° con Alt + rotella; overlay scuri su sfondo chiaro. Non pubblicato.
+- **2026-11-01** — Fase 6 realizzata con Blender 5.2 collegato via MCP. Provata con un GLB vero:
+  posizione, roll e focale di `Stage_Camera`, posizione e direzione di `Stage_Subject`, colori/grigio,
+  oggetti nascosti, reimportazione, annulla, salvataggio, ricaricamento pagina ed export MP4.
+  Il file della scena sta in IndexedDB per il salvataggio automatico e nel `.stage.json` per i progetti.
+  Manca il test in H3 con scena importata. Non pubblicato.
+- **2026-11-01** — Import confermato dall'utente ("funziona") e pubblicato come **v0.7.0**, insieme a
+  panoramica, roll ±360° e overlay scuri. Documentazione inglese allineata. Prossima: fase 7.

@@ -16,6 +16,7 @@ export default function App() {
   const thirds = useApp(s => s.thirds);
   const center = useApp(s => s.center);
   const safe = useApp(s => s.safe);
+  const lightBg = useApp(s => s.style.bg === 'chiaro');
   const t = useT();
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function App() {
           <section className="view">
             <header>{t('shot.title')} <span>{aspect}</span></header>
             <div className="shot-area" ref={shotArea} tabIndex={0}>
-              <div className="shot-frame" ref={shotFrame}>
+              <div className={lightBg ? 'shot-frame ov-dark' : 'shot-frame'} ref={shotFrame}>
                 <canvas ref={shotCanvas} />
                 {thirds && (
                   <div className="thirds"><i /><i /><i /><i /></div>

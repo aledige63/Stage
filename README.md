@@ -19,17 +19,21 @@ and scale cues without leaking into the result.
 ## Features
 
 - **Real camera moves**: orbit, dolly / push-in, truck, pedestal, crane, pan, tilt, roll and
-  optical zoom (12–200 mm, full-frame equivalent).
+  optical zoom (12–200 mm, full-frame equivalent). Roll goes up to ±360° for barrel rolls.
 - **Two views**: the *camera view* (the final framing, 16:9 or 9:16) and a free *director view*
   showing the camera, its field of view, target and path.
 - **Keyframe timeline**: 2–15 s, 24/25/30 fps, per-segment easing (Linear, Ease In, Ease Out,
-  Ease In-Out, Hold), arc or linear paths, draggable keyframes, loop playback.
-- **8 presets** built around the mannequin: orbit 90°/180°, push-in, pull-out, crane reveal,
+  Ease In-Out, Hold), arc, linear or pan paths (with full turns beyond 180°), draggable keyframes,
+  loop playback.
+- **11 presets**: orbit 90°/180°, pan 90°/180°/360°, push-in, pull-out, crane reveal,
   arc shot + push, lateral tracking, zoom in.
 - **Handheld camera**: deterministic shake with intensity, frequency and variant — the preview and
   the export match frame by frame.
 - **Scene blocking**: cubes, spheres, cylinders and panels you can move, rotate, scale and tint;
-  the mannequin can be moved and turned.
+  the mannequin can be moved and turned, and its height adjusted.
+- **Scenes from Blender**: import a GLB/glTF set as separate objects, in neutral gray or with its
+  own colors, embedded in the project. See [Scenes from Blender](#scenes-from-blender).
+- **Undo / redo** for keyframes, objects, scene and style.
 - **Guide-video styles**: bold/light grid or checkerboard floor, light/medium/dark background,
   mannequin color.
 - **Overlays** (preview only): rule of thirds, center cross, action/title safe areas.
@@ -92,7 +96,7 @@ panel). Hold **Shift** to move faster with the keyboard, or for finer mouse move
 | Crane | T / G | Ctrl + wheel |
 | Pan | J / L | right drag |
 | Tilt | I / K | right drag |
-| Roll | U / O | — |
+| Roll | U / O | Alt + wheel |
 | Zoom | Z / X | Shift + wheel |
 
 **Frame the mannequin** gives you a full shot, medium shot or close-up in one click.
@@ -116,6 +120,23 @@ Or start from a **Preset**.
 Click **Export…**, choose 720p or 1080p and press **Export MP4**. Then **Copy prompt** and use the
 video and the prompt together in your video model (for example as the camera/motion reference in
 MiniMax H3).
+
+### Scenes from Blender
+Build a simple set in Blender (also through the Blender MCP), then use *File → Export → glTF 2.0*
+with the **glTF Binary (.glb)** format and **Cameras** enabled under *Include*. In Stage, use
+**Import GLB…** in the **Scene from Blender** section.
+
+- Each top-level Blender object becomes a Stage object you can select, move, rotate, scale or hide.
+  The whole scene can also be moved and rotated together.
+- **Neutral gray / Blender colors** chooses how the scene looks in the guide video.
+- The file is embedded in the `.stage.json` project. **Reimport** replaces the scene and keeps
+  subject, camera and keyframes.
+- Optional names, applied by the first import: **`Stage_Subject`** (an empty with its origin on the
+  floor, or a mesh standing on it, facing Blender's −Y) places the mannequin; **`Stage_Camera`**
+  sets the starting view and focal length, if there are no keyframes yet. Neither is rendered.
+
+To ask the Blender MCP for a set: "use simple primitives, 1 unit = 1 m, floor at Z = 0, one named
+object per element, no lights needed; add `Stage_Subject` and `Stage_Camera`".
 
 ## Project structure
 
@@ -147,15 +168,13 @@ Every push to `main` is built and published to GitHub Pages by
 
 Planned next (see [PIANO.md](PIANO.md) and [CHANGELOG.md](CHANGELOG.md)):
 
-1. Undo/redo and automated tests.
-2. Import of simple previz scenes from Blender (GLB), embedded in the project.
-3. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
+1. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
    Ref2VA prompt.
-4. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
-5. Spline (Bézier) handles on the camera path.
-6. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
+2. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
+3. Spline (Bézier) handles on the camera path.
+4. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
    of saved moves, a dolly-zoom preset.
-7. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
+5. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
 
 ## License
 

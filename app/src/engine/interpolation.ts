@@ -27,7 +27,39 @@ function wrapAngle(a: number) {
   return a;
 }
 
-export function interpolate(a: CameraState, b: CameraState, e: number, path: PathMode): CameraState {
+const yawOf = (c: CameraState) => Math.atan2(c.target[0] - c.pos[0], c.target[2] - c.pos[2]);
+
+/** Due pose con la camera nello stesso punto (entro 1 cm) sono sempre una panoramica. */
+export function segmentPath(a: CameraState, b: CameraState, path: PathMode): PathMode {
+  return v(a.pos).distanceTo(v(b.pos)) < 0.01 ? 'pan' : path;
+}
+
+/** Rotazione orizzontale di una panoramica in radianti: positiva = verso sinistra. */
+export function panDelta(a: CameraState, b: CameraState, extraTurns = 0) {
+  return wrapAngle(yawOf(b) - yawOf(a)) + extraTurns * Math.PI * 2;
+}
+
+export function interpolate(a: CameraState, b: CameraState, e: number, path: PathMode, extraTurns = 0): CameraState {
+  const common = { roll: lerp(a.roll, b.roll, e), focal: Math.exp(lerp(Math.log(a.focal), Math.log(b.focal), e)) };
+
+  if (segmentPath(a, b, path) === 'pan') {
+    // la camera ruota su se stessa: si interpolano gli angoli, non il punto mirato
+    const P = v(a.pos).lerp(v(b.pos), e);
+    const da = v(a.target).sub(v(a.pos));
+    const db = v(b.target).sub(v(b.pos));
+    const la = da.length();
+    const lb = db.length();
+    const pitch = lerp(Math.asin(da.y / la), Math.asin(db.y / lb), e);
+    const yaw = yawOf(a) + panDelta(a, b, extraTurns) * e;
+    const dist = lerp(la, lb, e);
+    const c = Math.cos(pitch) * dist;
+    return {
+      ...common,
+      pos: [P.x, P.y, P.z],
+      target: [P.x + Math.sin(yaw) * c, P.y + Math.sin(pitch) * dist, P.z + Math.cos(yaw) * c],
+    };
+  }
+
   const Ta = v(a.target);
   const Tb = v(b.target);
   const T = Ta.clone().lerp(Tb, e);
@@ -50,9 +82,8 @@ export function interpolate(a: CameraState, b: CameraState, e: number, path: Pat
   return {
     pos: [P.x, P.y, P.z],
     target: [T.x, T.y, T.z],
-    roll: lerp(a.roll, b.roll, e),
-    // zoom percettivamente uniforme
-    focal: Math.exp(lerp(Math.log(a.focal), Math.log(b.focal), e)),
+    // roll lineare, zoom percettivamente uniforme
+    ...common,
   };
 }
 
@@ -67,7 +98,7 @@ export function evaluate(keys: Keyframe[], t: number): CameraState {
   const b = keys[i + 1];
   const span = b.time - a.time;
   const u = span > 0 ? (t - a.time) / span : 1;
-  return interpolate(a.camera, b.camera, EASE[a.easing](u), a.path);
+  return interpolate(a.camera, b.camera, EASE[a.easing](u), a.path, a.extraTurns);
 }
 
 /** Punti del percorso della camera, per disegnarlo nella vista regia. */
@@ -85,7 +116,7 @@ export function samplePath(keys: Keyframe[], samples: number): Vec3[] {
     const b = keys[k + 1];
     const span = b.time - a.time;
     const u = span > 0 ? THREE.MathUtils.clamp((t - a.time) / span, 0, 1) : 1;
-    out.push(interpolate(a.camera, b.camera, u, a.path).pos);
+    out.push(interpolate(a.camera, b.camera, u, a.path, a.extraTurns).pos);
   }
   return out;
 }

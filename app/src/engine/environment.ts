@@ -49,7 +49,8 @@ export function buildEnvironment(scene: THREE.Scene, style: StyleState, previous
   scene.background = new THREE.Color(p.sky);
   scene.fog = new THREE.Fog(p.sky, 25, 45);
 
-  const groundMat = new THREE.MeshStandardMaterial({ color: p.ground, roughness: 1 });
+  // spinto indietro: un pavimento importato alla stessa quota resta sopra, senza sfarfallio
+  const groundMat = new THREE.MeshStandardMaterial({ color: p.ground, roughness: 1, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
   if (style.grid === 'scacchiera') {
     groundMat.color.set(0xffffff);
     groundMat.map = checkerTexture(p.ground, p.check);

@@ -20,17 +20,21 @@ risultato.
 ## Funzioni
 
 - **Movimenti di camera reali**: orbit, dolly / push-in, truck, pedestal, crane, pan, tilt, roll e
-  zoom ottico (12–200 mm, equivalente full frame).
+  zoom ottico (12–200 mm, equivalente full frame). Il roll arriva a ±360° per i barrel roll.
 - **Due viste**: la *vista camera* (l'inquadratura finale, 16:9 o 9:16) e la *vista regia* libera,
   con la camera, il suo campo visivo, il target e il percorso.
 - **Timeline a keyframe**: 2–15 s, 24/25/30 fps, curva per ogni tratto (Linear, Ease In, Ease Out,
-  Ease In-Out, Hold), percorso ad arco o lineare, keyframe trascinabili, riproduzione in loop.
-- **8 preset** costruiti attorno al manichino: orbita 90°/180°, push-in, pull-out, crane reveal,
+  Ease In-Out, Hold), percorso ad arco, lineare o panoramica (con giri completi oltre 180°),
+  keyframe trascinabili, riproduzione in loop.
+- **11 preset**: orbita 90°/180°, panoramica 90°/180°/360°, push-in, pull-out, crane reveal,
   arc shot + push, carrello laterale, zoom in.
 - **Camera a mano**: tremolio deterministico con intensità, frequenza e variante. Anteprima ed
   export coincidono fotogramma per fotogramma.
 - **Scena**: cubi, sfere, cilindri e pannelli da spostare, ruotare, scalare e colorare; il manichino
-  si può spostare e girare.
+  si può spostare e girare e se ne può regolare l'altezza.
+- **Scene da Blender**: importa un set GLB/glTF come oggetti separati, in grigio neutro o con i suoi
+  colori, incorporato nel progetto. Vedi [Scene da Blender](#scene-da-blender).
+- **Annulla / ripeti** per keyframe, oggetti, scena e stile.
 - **Stili del video guida**: griglia marcata o leggera, scacchiera; sfondo chiaro, medio o scuro;
   colore del manichino.
 - **Overlay** (solo anteprima): terzi, croce centrale, aree di sicurezza azione/titoli.
@@ -93,7 +97,7 @@ pannello a sinistra). Con **Shift** ti muovi più veloce da tastiera, o in modo 
 | Crane | T / G | Ctrl + rotella |
 | Pan | J / L | trascina con il tasto destro |
 | Tilt | I / K | trascina con il tasto destro |
-| Roll | U / O | — |
+| Roll | U / O | Alt + rotella |
 | Zoom | Z / X | Shift + rotella |
 
 **Inquadra il manichino** dà figura intera, mezza figura o primo piano con un clic.
@@ -116,6 +120,24 @@ Oppure parti da un **Preset**.
 ### 3. Esporta
 Clicca **Esporta…**, scegli 720p o 1080p e premi **Esporta MP4**. Poi **Copia prompt** e usa video e
 prompt insieme nel modello video (ad esempio come riferimento di camera/movimento in MiniMax H3).
+
+### Scene da Blender
+Crea un set semplice in Blender (anche con il Blender MCP), poi usa *File → Esporta → glTF 2.0* con il
+formato **glTF Binary (.glb)** e **Fotocamere** attivo sotto *Includi*. In Stage usa **Importa GLB…**
+nella sezione **Scena da Blender**.
+
+- Ogni oggetto principale di Blender diventa un oggetto di Stage, che puoi selezionare, spostare,
+  ruotare, scalare o nascondere. Puoi anche spostare e ruotare tutta la scena insieme.
+- **Grigio neutro / Colori di Blender** sceglie l'aspetto della scena nel video guida.
+- Il file resta incorporato nel progetto `.stage.json`. **Reimporta** sostituisce la scena e mantiene
+  soggetto, camera e keyframe.
+- Nomi facoltativi, applicati dal primo import: **`Stage_Subject`** (un oggetto vuoto con l'origine a
+  terra, o una mesh appoggiata a terra, rivolti verso −Y di Blender) posiziona il manichino;
+  **`Stage_Camera`** imposta inquadratura di partenza e focale, se non ci sono ancora keyframe.
+  Nessuno dei due compare nel video.
+
+Da chiedere al Blender MCP per un set: "usa primitive semplici, 1 unità = 1 m, pavimento a Z = 0, un
+oggetto con un nome per ogni elemento, luci non necessarie; aggiungi `Stage_Subject` e `Stage_Camera`".
 
 ## Struttura del progetto
 
@@ -147,16 +169,14 @@ Ogni push su `main` viene compilato e pubblicato su GitHub Pages da
 
 In programma (vedi [PIANO.md](PIANO.md) e [CHANGELOG.md](CHANGELOG.md)):
 
-1. Annulla/ripeti e test automatici.
-2. Import di semplici scene di previz da Blender (GLB), incorporate nel progetto.
-3. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
+1. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
    locale in un prompt Ref2VA.
-4. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
+2. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
    del soggetto.
-5. Maniglie spline (Bézier) sul percorso della camera.
-6. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
+3. Maniglie spline (Bézier) sul percorso della camera.
+4. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
    libreria dei movimenti, preset dolly zoom.
-7. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
+5. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
 
 ## Licenza
 

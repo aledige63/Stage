@@ -13,7 +13,7 @@ export interface CameraState {
 }
 
 export type PrimitiveKind = 'cubo' | 'sfera' | 'cilindro' | 'pannello';
-export type ObjectKind = PrimitiveKind | 'manichino';
+export type ObjectKind = PrimitiveKind | 'manichino' | 'importato';
 
 export interface SceneObject {
   id: string;
@@ -25,6 +25,21 @@ export interface SceneObject {
   scale: Vec3;
   /** tono di grigio 0 (scuro) .. 1 (chiaro) */
   tone: number;
+  /** oggetti importati: posizione nell'elenco degli oggetti del file */
+  source?: number;
+  hidden?: boolean;
+}
+
+/** Scena importata da Blender: il file intero resta nel progetto. */
+export interface BlenderScene {
+  id: string;
+  fileName: string;
+  /** contenuto del file in base64; vuoto finché non è riletto dal salvataggio automatico */
+  glb: string;
+  bytes: number;
+  /** spostamento e rotazione di tutta la scena */
+  offset: Vec3;
+  yaw: number;
 }
 
 /** Cosa rappresenta il soggetto nel video guida (anteprima ed export). */
@@ -36,6 +51,8 @@ export interface StyleState {
   bg: 'chiaro' | 'medio' | 'scuro';
   mann: 'grigio' | 'bianco' | 'arancio';
   refs: boolean;
+  /** aspetto della scena importata nel video guida */
+  sceneLook: 'grigio' | 'colori';
 }
 
 export interface HandheldState {
@@ -68,8 +85,11 @@ export type GizmoMode = 'translate' | 'rotate' | 'scale';
 
 /** Curva del tratto che parte da un keyframe e arriva al successivo. */
 export type Easing = 'linear' | 'in' | 'out' | 'inout' | 'hold';
-/** Arco: la camera gira attorno al target (orbite). Lineare: linea retta (dolly, truck, crane). */
-export type PathMode = 'arc' | 'linear';
+/**
+ * Arco: la camera gira attorno al target (orbite). Lineare: linea retta (dolly, truck, crane).
+ * Panoramica: la camera ruota su se stessa (pan, tilt).
+ */
+export type PathMode = 'arc' | 'linear' | 'pan';
 
 export interface Keyframe {
   id: string;
@@ -78,6 +98,8 @@ export interface Keyframe {
   camera: CameraState;
   easing: Easing;
   path: PathMode;
+  /** panoramica: giri completi in più rispetto alla via breve (positivo = verso sinistra) */
+  extraTurns?: number;
 }
 
 export interface AppState {
@@ -111,6 +133,7 @@ export interface AppState {
   /** moltiplicatore di velocità per tastiera e pulsanti */
   speed: number;
   objects: SceneObject[];
+  blenderScene: BlenderScene | null;
   selectedId: string | null;
   gizmo: GizmoMode;
   style: StyleState;
@@ -125,7 +148,7 @@ export const SUBJECT_HEIGHT_MAX = 2.1;
 /** Fattore di scala del soggetto rispetto al modello del manichino. */
 export const subjectScale = (s: { subjectHeight: number }) => s.subjectHeight / MANNEQUIN_HEIGHT;
 
-export const DEFAULT_STYLE: StyleState = { subject: 'manichino', grid: 'marcata', bg: 'chiaro', mann: 'grigio', refs: false };
+export const DEFAULT_STYLE: StyleState = { subject: 'manichino', grid: 'marcata', bg: 'chiaro', mann: 'grigio', refs: false, sceneLook: 'grigio' };
 
 export const DEFAULT_CAMERA: CameraState = { pos: [0, 1.5, 5], target: [0, 1.1, 0], roll: 0, focal: 35 };
 
@@ -153,6 +176,7 @@ export const store = createStore<AppState>()(() => ({
   objects: [
     { id: MANNEQUIN_ID, kind: 'manichino', name: 'Manichino', pos: [0, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1], tone: 0.6 },
   ],
+  blenderScene: null,
   selectedId: null,
   gizmo: 'translate',
   style: DEFAULT_STYLE,

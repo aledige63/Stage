@@ -7,12 +7,15 @@ import { clearHistory } from './history';
 // temporaneo dell'interfaccia (testina, selezione, riproduzione).
 
 const FORMAT = 'stage-project';
-const VERSION = 1;
+const VERSION = 2;
 const AUTOSAVE_KEY = 'stage:autosave';
+// il file della scena può superare il limite di localStorage: nel salvataggio automatico sta in IndexedDB
+const SCENE_DB = 'stage';
+const SCENE_STORE = 'scene';
 
 const SAVED_KEYS = [
   'projectName', 'exportRes', 'exportAudio', 'duration', 'fps', 'keyframes', 'loop',
-  'aspect', 'thirds', 'center', 'safe', 'handheld', 'subjectHeight', 'camera', 'speed', 'objects', 'style',
+  'aspect', 'thirds', 'center', 'safe', 'handheld', 'subjectHeight', 'camera', 'speed', 'objects', 'blenderScene', 'style',
 ] as const;
 
 type SavedState = Pick<AppState, (typeof SAVED_KEYS)[number]>;
@@ -46,6 +49,8 @@ export function validate(raw: unknown): SavedState {
   const d = f.data as Partial<SavedState>;
   if (!Array.isArray(d.objects) || !d.objects.some(o => o.id === MANNEQUIN_ID)) throw new Error(t('err.noMannequin'));
   if (!Array.isArray(d.keyframes)) throw new Error(t('err.noKeyframes'));
+  const b = d.blenderScene;
+  if (b && (typeof b.id !== 'string' || typeof b.glb !== 'string' || !isVec3(b.offset))) throw new Error(t('err.badScene'));
   for (const o of d.objects) if (!isVec3(o.pos) || !isVec3(o.rot) || !isVec3(o.scale)) throw new Error(t('err.badObject', { name: o.name }));
   for (const k of d.keyframes) {
     if (typeof k.time !== 'number' || !isVec3(k.camera?.pos) || !isVec3(k.camera?.target)) throw new Error(t('err.badKeyframe'));
@@ -56,6 +61,8 @@ export function validate(raw: unknown): SavedState {
 function applyData(d: SavedState) {
   setState({
     ...d,
+    blenderScene: d.blenderScene ?? null,
+    objects: d.blenderScene ? d.objects : d.objects.filter(o => o.kind !== 'importato'),
     exportAudio: d.exportAudio ?? true,
     center: d.center ?? false,
     safe: d.safe ?? false,
@@ -93,6 +100,7 @@ export function newProject() {
     projectName: t('project.defaultName'),
     keyframes: [],
     objects: store.getState().objects.filter(o => o.id === MANNEQUIN_ID).map(o => ({ ...o, pos: [0, 0, 0], rot: [0, 0, 0] })),
+    blenderScene: null,
     camera: DEFAULT_CAMERA,
     time: 0,
     playing: false,
@@ -107,10 +115,46 @@ export function newProject() {
 // Salvataggio automatico nel browser (resta solo su questo computer e browser)
 // ---------------------------------------------------------------------------
 
+function withSceneStore<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open(SCENE_DB, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(SCENE_STORE);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const req = run(open.result.transaction(SCENE_STORE, mode).objectStore(SCENE_STORE));
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        open.result.close();
+        resolve(req.result);
+      };
+    };
+  });
+}
+
+/** Riporta il file della scena nel progetto ripristinato; se manca, la scena viene tolta. */
+async function restoreSceneFile(id: string) {
+  let glb: string | undefined;
+  try {
+    glb = await withSceneStore<string | undefined>('readonly', s => s.get(id));
+  } catch {
+    // archivio non disponibile: come se il file mancasse
+  }
+  setState(s => {
+    if (s.blenderScene?.id !== id) return s;
+    return glb
+      ? { blenderScene: { ...s.blenderScene, glb } }
+      : { blenderScene: null, objects: s.objects.filter(o => o.kind !== 'importato') };
+  });
+  clearHistory();
+}
+
 export function restoreAutosave() {
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
-    if (raw) applyData(validate(JSON.parse(raw)));
+    if (!raw) return;
+    const data = validate(JSON.parse(raw));
+    applyData(data);
+    if (data.blenderScene) void restoreSceneFile(data.blenderScene.id);
   } catch {
     // salvataggio assente o illeggibile: si parte da un progetto vuoto
   }
@@ -119,13 +163,26 @@ export function restoreAutosave() {
 export function startAutosave() {
   let timer = 0;
   let last = '';
+  let lastScene: string | null = null;
   return store.subscribe(s => {
     // durante la riproduzione cambia solo la testina: niente da salvare
     if (s.playing) return;
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       try {
-        const json = JSON.stringify(snapshot());
+        const file = snapshot();
+        const scene = file.data.blenderScene;
+        if (scene?.glb && scene.id !== lastScene) {
+          lastScene = scene.id;
+          void withSceneStore('readwrite', st => {
+            st.clear();
+            return st.put(scene.glb, scene.id);
+          }).catch(() => {
+            // archiviazione non disponibile: la scena resta nei file di progetto salvati
+          });
+        }
+        if (scene) file.data = { ...file.data, blenderScene: { ...scene, glb: '' } };
+        const json = JSON.stringify(file);
         if (json.length && json.slice(json.indexOf('"data"')) !== last) {
           last = json.slice(json.indexOf('"data"'));
           localStorage.setItem(AUTOSAVE_KEY, json);
