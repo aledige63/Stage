@@ -19,8 +19,8 @@ Versione attuale: **v0.6.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
 | — | Interfaccia IT/EN, pubblicazione GitHub, soggetto nel video guida | ✅ Completata (v0.5.0) |
 | 5 | Fondamenta e interfaccia: annulla/ripeti, test, pannello destro, misure camera e soggetto | ✅ Completata (v0.6.0) |
 | 6 | Import di scene da Blender (GLB) | ✅ Completata (v0.7.0) |
-| 7 | Prompt "per LLM" (blocco camera compatto) | 🔄 Prossima |
-| 8 | Soggetto in movimento e target agganciato al soggetto | ⏳ Da iniziare |
+| 7 | Prompt per Ref2VA (accanto all'originale) | ✅ Completata (v0.8.0) |
+| 8 | Soggetto in movimento e target agganciato al soggetto | 🔄 Prossima |
 | 9 | Spline sul percorso della camera | ⏳ Da iniziare |
 | 10 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
 | 11 | Più personaggi e pose pronte (solo se i test della fase 8 lo giustificano) | ⏳ Condizionata |
@@ -179,7 +179,7 @@ export GLB → import in Stage, dove si lavora la camera (più intuitiva di quel
 - [x] **Convenzione sui nomi** in Blender: `Stage_Subject` → posizione e orientamento del manichino;
       `Stage_Camera` → inquadratura di partenza con la stessa focale
 - [x] Breve guida nel README per il flusso Blender (e indicazioni da dare al Blender MCP)
-- [ ] Test in H3 di uno shot con scena importata (colori e grigio)
+- [x] Test in H3 di uno shot con scena importata: ok (riscontro utente)
 - Alternativa scartata per ora: generare direttamente un progetto Stage dall'LLM, saltando
   Blender (più fragile e meno comodo da ritoccare)
 
@@ -188,13 +188,19 @@ Contesto: il prompt dell'utente (Ref2VA) ha sezioni `subject_definitions`, `summ
 `retention_analysis`, `detailed_description`; il testo di Stage finisce in
 "Movement instructions for <Video 1>". Il prompt dell'utente dichiara già che `<Video 1>` guida
 solo camera e ritmo.
-- [ ] Formato **"per LLM"** (predefinito) accanto a quello **"descrittivo"** attuale: solo il blocco
-      movimento — inquadratura iniziale, un tratto per riga (tempi, movimento, gradi/metri,
-      direzione, focale, curva), inquadratura finale
-- [ ] Nel formato per LLM niente riga sulla scena guida ("must not appear") né frase di stile finale:
-      sono già gestite dal prompt dell'utente
-- [ ] Tratto finale fermo ("holds still") indicato solo se dura in modo significativo (es. > 0,3 s)
-- [ ] Verifica sul flusso reale dell'utente (Stage → Gemma → H3)
+Deciso dopo l'esempio di prompt riuscito dell'utente (2026-11-03): Gemma ricopia quasi parola per
+parola il testo di Stage, quindi il testo descrittivo resta; l'utente lo incolla a mano.
+- [x] Due testi nella finestra Esporta: prima il **Prompt originale** (invariato), poi il **Prompt per
+      Ref2VA** come esempio, richiuso
+- [x] Il testo per Ref2VA dà i pezzi già pronti con le etichette delle sezioni: riga di `<Video 1>` per
+      `subject_definitions` (con la durata), riga per `retention_analysis`, blocco per
+      `detailed_description`
+- [x] Segnaposto modificabili (`<Subject 1>`, `<Video 1>`), ricordati dal browser
+- [x] Niente ripetizioni: una sola frase "Use only the camera movement from `<Video 1>`" al posto di
+      "Follow exactly…"; tolte "(physical push-in)", "(pull-out)" e "while staying aimed at the subject";
+      nessuna riga di formato e durata (la durata è nella definizione)
+- [x] Tratto finale fermo ("holds still") indicato solo se dura più di 0,3 s
+- [x] Verifica sul flusso reale dell'utente: all'LLM basta il prompt originale; l'esempio Ref2VA resta come riferimento
 
 ### Fase 8 — Soggetto in movimento e target agganciato (vitale)
 - [ ] **Keyframe del soggetto** nella timeline (posizione e rotazione), su una traccia separata da
@@ -347,3 +353,13 @@ Si fa solo se i test della fase 8 mostrano che posa e movimento del soggetto inf
   Manca il test in H3 con scena importata. Non pubblicato.
 - **2026-11-01** — Import confermato dall'utente ("funziona") e pubblicato come **v0.7.0**, insieme a
   panoramica, roll ±360° e overlay scuri. Documentazione inglese allineata. Prossima: fase 7.
+- **2026-11-01** — Test in H3 con scena importata: ok (riscontro utente). Fase 6 chiusa.
+- **2026-11-03** — Fase 7 realizzata sul prompt Ref2VA riuscito dell'utente: nella finestra Esporta ci
+  sono ora il prompt per Ref2VA (pezzi per le sezioni, segnaposto modificabili, senza ripetizioni) e il
+  prompt originale. Resta da provare nel flusso Stage → Gemma → H3. Test in H3 di panoramiche e barrel
+  roll rimandato dall'utente. Non pubblicato.
+- **2026-11-03** — Dubbio dell'utente: all'LLM basta probabilmente la descrizione del movimento, che poi
+  inserisce nel contesto del prompt. Il prompt originale torna primo; quello per Ref2VA resta come
+  esempio, richiuso, sotto. Non pubblicato.
+- **2026-11-19** — Test in H3 di panoramica e barrel roll: ok (riscontro utente). Fase 7 chiusa:
+  si usa il prompt originale. Pubblicato come **v0.8.0**. Prossima: fase 8 (soggetto in movimento).

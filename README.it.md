@@ -42,7 +42,8 @@ risultato.
   velocità del computer), con **traccia audio muta AAC** opzionale per i campionatori che richiedono
   l'ingresso audio.
 - **Generatore di prompt**: descrive in inglese l'inquadratura iniziale e finale e ogni tratto del
-  movimento, pronto da incollare nel modello video.
+  movimento, pronto da incollare nel modello video. Un esempio **Ref2VA**, richiuso, mostra i pezzi
+  già pronti per un prompt strutturato di MiniMax H3.
 - **Progetti**: salva/apri file `.stage.json` (anche tra PC e Mac) e salvataggio automatico nel browser.
 - **Interfaccia in italiano e in inglese**.
 - **Soggetto nel video guida**: manichino, cilindro, blocco (solo posizione, ingombro e direzione) o
@@ -121,6 +122,13 @@ Oppure parti da un **Preset**.
 Clicca **Esporta…**, scegli 720p o 1080p e premi **Esporta MP4**. Poi **Copia prompt** e usa video e
 prompt insieme nel modello video (ad esempio come riferimento di camera/movimento in MiniMax H3).
 
+La finestra mostra due prompt:
+- **Prompt originale**: la descrizione del movimento di camera, da usare così com'è o da dare a un LLM
+  che la inserisce in un prompt più ampio.
+- **Prompt per Ref2VA (esempio)**, richiuso sotto il primo: pezzi con le etichette
+  `subject_definitions`, `retention_analysis` e `detailed_description`, con i segnaposto che imposti
+  (di base `<Subject 1>` e `<Video 1>`).
+
 ### Scene da Blender
 Crea un set semplice in Blender (anche con il Blender MCP), poi usa *File → Esporta → glTF 2.0* con il
 formato **glTF Binary (.glb)** e **Fotocamere** attivo sotto *Includi*. In Stage usa **Importa GLB…**
@@ -169,14 +177,12 @@ Ogni push su `main` viene compilato e pubblicato su GitHub Pages da
 
 In programma (vedi [PIANO.md](PIANO.md) e [CHANGELOG.md](CHANGELOG.md)):
 
-1. Un formato di prompt "per LLM", breve e strutturato, pensato per essere rielaborato da un LLM
-   locale in un prompt Ref2VA.
-2. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
+1. Soggetto in movimento con keyframe propri, e target della camera agganciato a qualsiasi punto
    del soggetto.
-3. Maniglie spline (Bézier) sul percorso della camera.
-4. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
+2. Maniglie spline (Bézier) sul percorso della camera.
+3. Export di immagini, legenda dei tasti a scomparsa, scorciatoie per gli oggetti della scena,
    libreria dei movimenti, preset dolly zoom.
-5. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
+4. Fino a tre soggetti con nomi, colori e pose pronte (solo se i test ne mostrano l'utilità).
 
 ## Licenza
 

@@ -4,7 +4,7 @@ import { DEFAULT_CAMERA, DEFAULT_STYLE, MANNEQUIN_HEIGHT, MANNEQUIN_ID, setState
 import { analyzeScene, CAMERA_NODE, cameraFromNode, fromBase64, SUBJECT_NODE, toBase64 } from '../engine/blenderImport';
 import { applyToCamera } from '../engine/cameraOps';
 import { applyPreset } from '../timeline';
-import { generatePrompt } from '../export/prompt';
+import { generatePrompt, generateRef2vaPrompt } from '../export/prompt';
 import { validate } from '../project';
 import { clearHistory, redo, undo } from '../history';
 
@@ -95,6 +95,35 @@ describe('scena da Blender', () => {
     expect(store.getState().blenderScene).toEqual(scene);
     setState({ blenderScene: null });
     clearHistory();
+  });
+});
+
+describe('prompt per Ref2VA', () => {
+  it('usa i segnaposto e la durata nei tre pezzi', () => {
+    setState({ duration: 8 });
+    applyPreset('orbita180');
+    const p = generateRef2vaPrompt(store.getState());
+    expect(p).toMatch(/^subject_definitions:\n<Video 1> is the declared motion guide, used as the camera-movement guide \(8s\)\./);
+    expect(p).toMatch(/retention_analysis:\n<Video 1> \(camera-movement guide\): fully_preserved/);
+    expect(p).toMatch(/detailed_description:\nUse only the camera movement from <Video 1>; the gray mannequin/);
+    expect(p).toMatch(/of <Subject 1>, profile view from <Subject 1>'s right/);
+    expect(p).toMatch(/around <Subject 1>, moving to/);
+    expect(p).not.toMatch(/the subject|reference video;/);
+  });
+
+  it('toglie le precisazioni superflue, che restano nel prompt originale', () => {
+    setState({ keyframes: [], camera: { ...DEFAULT_CAMERA, pos: [0, 2.5, 6] } });
+    applyPreset('push');
+    const s = store.getState();
+    expect(generateRef2vaPrompt(s)).not.toMatch(/physical push-in|staying aimed/);
+    expect(generatePrompt(s)).toMatch(/physical push-in/);
+  });
+
+  it('accetta segnaposto personalizzati', () => {
+    applyPreset('orbita90');
+    const p = generateRef2vaPrompt(store.getState(), { subject: 'Anna', video: '<Video 2>' });
+    expect(p).toMatch(/from <Video 2>;/);
+    expect(p).toMatch(/around Anna/);
   });
 });
 

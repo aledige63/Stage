@@ -4,6 +4,13 @@ All notable changes to Stage are listed here. Versions follow MAJOR.MINOR.PATCH.
 Tutte le modifiche rilevanti di Stage sono elencate qui (in inglese; il diario di sviluppo in
 italiano è in [PIANO.md](PIANO.md)).
 
+## [0.8.0] — 2026-11-19
+
+### Added
+- **Ref2VA prompt example** in the export dialog, collapsed below the original prompt: ready-made
+  pieces for `subject_definitions`, `retention_analysis` and `detailed_description`, with editable
+  placeholders (`<Subject 1>`, `<Video 1>`) and no repeated phrases.
+
 ## [0.7.0] — 2026-11-01
 
 ### Added

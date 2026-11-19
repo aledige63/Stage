@@ -1,11 +1,72 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { setState, store, useApp } from '../store';
 import { pause } from '../timeline';
 import { exportSize, exportVideo, videoSupported, type Resolution } from '../export/video';
-import { generatePrompt } from '../export/prompt';
+import { DEFAULT_TOKENS, generatePrompt, generateRef2vaPrompt } from '../export/prompt';
 import { pickSaveTarget, sanitizeFileName } from '../export/files';
-import { useT } from '../i18n';
+import { useT, type TKey } from '../i18n';
 import { SubjectPicker } from './Panel';
+
+function readTokens(): typeof DEFAULT_TOKENS {
+  try {
+    return { ...DEFAULT_TOKENS, ...JSON.parse(localStorage.getItem('stage:tokens') ?? '{}') };
+  } catch {
+    return DEFAULT_TOKENS;
+  }
+}
+
+/** Testo del prompt modificabile, con copia, salvataggio e rigenerazione. */
+function PromptBox({ title, note, make, fileName, rows, setStatus, children, collapsed }: {
+  title: TKey; note: TKey; make: () => string; fileName: string; rows: number; collapsed?: boolean;
+  setStatus: (s: string) => void; children?: ReactNode;
+}) {
+  const t = useT();
+  const [text, setText] = useState(make);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus(t('ex.copied'));
+    } catch {
+      setStatus(t('ex.copyFail'));
+    }
+  };
+
+  const save = async () => {
+    const target = await pickSaveTarget(fileName, t('file.text'), 'text/plain', '.txt');
+    if (!target) return;
+    await target.write(new Blob([text], { type: 'text/plain' }));
+    setStatus(t('ex.promptSaved'));
+  };
+
+  const body = (
+    <>
+      <p className="muted">{t(note)}</p>
+      {children}
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={rows} spellCheck={false} aria-label={t(title)} />
+      <div className="row">
+        <button onClick={copy}>{t('ex.copy')}</button>
+        <button onClick={save}>{t('ex.saveTxt')}</button>
+        <span className="spacer" />
+        <button onClick={() => setText(make())} title={t('ex.regenTitle')}>{t('ex.regen')}</button>
+      </div>
+    </>
+  );
+  // richiuso: un esempio da aprire solo se serve
+  return collapsed ? (
+    <section>
+      <details>
+        <summary><h3>{t(title)}</h3></summary>
+        {body}
+      </details>
+    </section>
+  ) : (
+    <section>
+      <h3>{t(title)}</h3>
+      {body}
+    </section>
+  );
+}
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const aspect = useApp(s => s.aspect);
@@ -17,7 +78,8 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const projectName = useApp(s => s.projectName);
   const t = useT();
 
-  const [prompt, setPrompt] = useState(() => generatePrompt(store.getState()));
+  const [tokens, setTokens] = useState(readTokens);
+  const [ref2vaKey, setRef2vaKey] = useState(0);
   const [progress, setProgress] = useState<number | null>(null);
   const [status, setStatus] = useState('');
   const abort = useRef<AbortController | null>(null);
@@ -47,20 +109,14 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const copyPrompt = async () => {
+  const setToken = (key: keyof typeof DEFAULT_TOKENS, value: string) => {
+    const next = { ...tokens, [key]: value };
+    setTokens(next);
     try {
-      await navigator.clipboard.writeText(prompt);
-      setStatus(t('ex.copied'));
+      localStorage.setItem('stage:tokens', JSON.stringify(next));
     } catch {
-      setStatus(t('ex.copyFail'));
+      // preferenza non salvabile
     }
-  };
-
-  const savePrompt = async () => {
-    const target = await pickSaveTarget(baseName + '.txt', t('file.text'), 'text/plain', '.txt');
-    if (!target) return;
-    await target.write(new Blob([prompt], { type: 'text/plain' }));
-    setStatus(t('ex.promptSaved'));
   };
 
   return (
@@ -100,17 +156,16 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
           </div>
         </section>
 
-        <section>
-          <h3>{t('ex.prompt')}</h3>
-          <p className="muted">{t('ex.promptNote')}</p>
-          <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={9} spellCheck={false} />
-          <div className="row">
-            <button onClick={copyPrompt}>{t('ex.copy')}</button>
-            <button onClick={savePrompt}>{t('ex.saveTxt')}</button>
-            <span className="spacer" />
-            <button onClick={() => setPrompt(generatePrompt(store.getState()))} title={t('ex.regenTitle')}>{t('ex.regen')}</button>
+        <PromptBox title="ex.prompt" note="ex.promptNote" rows={9} fileName={baseName + '.txt'}
+          make={() => generatePrompt(store.getState())} setStatus={setStatus} />
+        {/* la chiave ricrea il testo quando cambiano i segnaposto */}
+        <PromptBox key={ref2vaKey} collapsed title="ex.ref2va" note="ex.ref2vaNote" rows={12} fileName={baseName + '_ref2va.txt'}
+          make={() => generateRef2vaPrompt(store.getState(), tokens)} setStatus={setStatus}>
+          <div className="row tokens">
+            <label>{t('ex.tokenSubject')} <input value={tokens.subject} onChange={e => setToken('subject', e.target.value)} onBlur={() => setRef2vaKey(k => k + 1)} /></label>
+            <label>{t('ex.tokenVideo')} <input value={tokens.video} onChange={e => setToken('video', e.target.value)} onBlur={() => setRef2vaKey(k => k + 1)} /></label>
           </div>
-        </section>
+        </PromptBox>
 
         <p className="status">{status}</p>
       </div>

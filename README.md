@@ -40,7 +40,8 @@ and scale cues without leaking into the result.
 - **Export**: H.264 MP4 at 720p or 1080p, rendered frame by frame (independent of your computer's
   speed), with an optional **silent AAC audio track** for samplers that require an audio input.
 - **Prompt generator**: describes the opening/closing framing and every segment of the move in
-  English, ready to paste into your video model.
+  English, ready to paste into your video model. A collapsed **Ref2VA** example shows
+  ready-made pieces for a structured MiniMax H3 prompt.
 - **Projects**: save/open `.stage.json` files (move them between PC and Mac) plus automatic saving
   in the browser.
 - **Italian and English interface**.
@@ -121,6 +122,13 @@ Click **Export…**, choose 720p or 1080p and press **Export MP4**. Then **Copy 
 video and the prompt together in your video model (for example as the camera/motion reference in
 MiniMax H3).
 
+The dialog shows two prompts:
+- **Original prompt**: a description of the camera move, to use as it is or to give to an LLM that
+  fits it into a larger prompt.
+- **Ref2VA prompt (example)**, collapsed below it: pieces labeled `subject_definitions`,
+  `retention_analysis` and `detailed_description`, using the placeholders you set (default
+  `<Subject 1>` and `<Video 1>`).
+
 ### Scenes from Blender
 Build a simple set in Blender (also through the Blender MCP), then use *File → Export → glTF 2.0*
 with the **glTF Binary (.glb)** format and **Cameras** enabled under *Include*. In Stage, use
@@ -168,13 +176,11 @@ Every push to `main` is built and published to GitHub Pages by
 
 Planned next (see [PIANO.md](PIANO.md) and [CHANGELOG.md](CHANGELOG.md)):
 
-1. A compact, structured "for LLM" prompt format, designed to be rewritten by a local LLM into a
-   Ref2VA prompt.
-2. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
-3. Spline (Bézier) handles on the camera path.
-4. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
+1. A moving subject with its own keyframes, and a camera target locked to any point on the subject.
+2. Spline (Bézier) handles on the camera path.
+3. Still-image export, a toggleable shortcut legend, keyboard shortcuts for scene objects, a library
    of saved moves, a dolly-zoom preset.
-5. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
+4. Up to three subjects with names, colors and ready-made poses (only if tests show it helps).
 
 ## License
 
