@@ -1,8 +1,8 @@
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { currentEngine } from '../engine/Engine';
-import { evaluate } from '../engine/interpolation';
+import { cameraAt } from '../engine/subjectMotion';
 import { handheldShake } from '../engine/handheld';
-import { store, type Aspect, type CameraState } from '../store';
+import { store, type Aspect } from '../store';
 import { t } from '../i18n';
 
 export type Resolution = 720 | 1080;
@@ -88,7 +88,6 @@ export async function exportVideo(opts: {
   const [width, height] = exportSize(s.aspect, opts.res);
   const fps = s.fps;
   const total = Math.max(2, Math.round(s.duration * fps));
-  const cameraAt = (t: number): CameraState => (s.keyframes.length ? evaluate(s.keyframes, t) : s.camera);
 
   const config = await pickEncoderConfig(width, height, fps);
   if (!config) throw new Error(t('err.h264', { w: width, h: height }));
@@ -121,7 +120,7 @@ export async function exportVideo(opts: {
       if (opts.signal.aborted) throw new DOMException('Export annullato', 'AbortError');
       if (encodeError) throw encodeError;
       const t = (i / (total - 1)) * s.duration;
-      frames.render(cameraAt(t), handheldShake(s.handheld, t));
+      frames.render(cameraAt(s, t), handheldShake(s.handheld, t), t);
       const frame = new VideoFrame(frames.canvas, { timestamp: Math.round(i * frameDur), duration: Math.round(frameDur) });
       encoder.encode(frame, { keyFrame: i % fps === 0 });
       frame.close();

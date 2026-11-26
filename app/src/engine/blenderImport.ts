@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { MANNEQUIN_ID, setState, store, type CameraState, type SceneObject, type Vec3 } from '../store';
+import { setState, store, subjectHeight, subjectObject, type CameraState, type SceneObject, type Vec3 } from '../store';
 import { FILM_GAUGE, FOCAL_MAX, FOCAL_MIN, MIN_HEIGHT } from './cameraOps';
 import { t } from '../i18n';
 
@@ -155,10 +155,12 @@ export async function importBlenderFile(file: File): Promise<ImportResult> {
     hidden: hidden.has(node.name) || undefined,
   }));
 
-  const applySubject = first && parsed.subject !== null;
+  // Stage_Subject posiziona il soggetto principale, se c'è e non ha una sua timeline
+  const subject = subjectObject(s);
+  const applySubject = first && parsed.subject !== null && subject !== null && !subject.keys?.length;
   const kept = s.objects.filter(o => o.kind !== 'importato').map(o =>
-    applySubject && o.id === MANNEQUIN_ID ? { ...o, pos: parsed.subject!.pos, rot: [0, parsed.subject!.yaw, 0] as Vec3 } : o);
-  const mannequin = kept.find(o => o.id === MANNEQUIN_ID)!;
+    applySubject && o.id === subject!.id ? { ...o, pos: parsed.subject!.pos, rot: [0, parsed.subject!.yaw, 0] as Vec3 } : o);
+  const look = (applySubject ? parsed.subject!.pos : subject?.pos) ?? [0, 0, 0];
   const applyCamera = first && parsed.camera !== null && s.keyframes.length === 0;
 
   setState({
@@ -173,7 +175,7 @@ export async function importBlenderFile(file: File): Promise<ImportResult> {
     objects: [...kept, ...imported],
     selectedId: null,
     ...(applyCamera ? {
-      camera: cameraFromNode(parsed.camera!, [mannequin.pos[0], mannequin.pos[1] + s.subjectHeight * 0.6, mannequin.pos[2]]),
+      camera: cameraFromNode(parsed.camera!, [look[0], look[1] + subjectHeight(s) * 0.6, look[2]]),
       dirty: false,
     } : {}),
   });

@@ -1,15 +1,18 @@
-import { useRef } from 'react';
-import { setState, store, useApp, type Easing, type Keyframe } from '../store';
+import { useCallback, useRef, useState } from 'react';
+import { colorCss, setState, store, useApp, type Easing, type Keyframe, type ObjectKey, type SceneObject } from '../store';
 import { EASING_LABELS, panDelta, segmentPath } from '../engine/interpolation';
 import {
-  applyPreset, clearKeyframes, deleteKeyframe, DURATION_MAX, DURATION_MIN, FPS_OPTIONS, jumpKey, pause, PRESETS, seek,
-  setDuration, setFps, setKeyframe, togglePlay, updateKeyframe, type PresetId,
+  applyPreset, clearKeyframes, deleteKeyframe, deleteObjectKey, DURATION_MAX, DURATION_MIN, FPS_OPTIONS, jumpKey, keyOwner, pause, PRESETS, refreshKeyframe, refreshObjectKey,
+  seek, setDuration, setFps, setKeyframe, setObjectKey, togglePlay, updateKeyframe, updateObjectKey, type PresetId,
 } from '../timeline';
-import { useT, type TKey } from '../i18n';
+import { objectLabel, useT, type TKey } from '../i18n';
+import { KeyMenu, type KeyMenuTarget } from './KeyMenu';
+
+type OpenMenu = (e: React.MouseEvent, key: string, obj?: string) => void;
 
 const EASINGS: Easing[] = ['linear', 'in', 'out', 'inout', 'hold'];
 
-function Track() {
+function Track({ onMenu }: { onMenu: OpenMenu }) {
   const ref = useRef<HTMLDivElement>(null);
   const duration = useApp(s => s.duration);
   const time = useApp(s => s.time);
@@ -24,6 +27,7 @@ function Track() {
   };
 
   const onScrub = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
     pause();
     e.currentTarget.setPointerCapture(e.pointerId);
     seek(timeAt(e.clientX));
@@ -32,8 +36,10 @@ function Track() {
   const onKeyDown = (e: React.PointerEvent, k: Keyframe) => {
     e.stopPropagation();
     pause();
+    // clic destro: seleziona senza spostare la testina (serve a "duplica qui")
+    if (e.button === 2) { setState({ selectedKey: k.id, selectedObjKey: null }); return; }
     e.currentTarget.setPointerCapture(e.pointerId);
-    setState({ selectedKey: k.id });
+    setState({ selectedKey: k.id, selectedObjKey: null });
     seek(k.time);
   };
 
@@ -59,7 +65,8 @@ function Track() {
             className={`tl-seg ${k.easing}`}
             style={{ left: pct(k.time), width: pct(next.time - k.time) }}
             title={`${EASING_LABELS[k.easing]} · ${path === 'pan' ? t('tl.segPan') : path === 'arc' ? t('tl.segArc') : t('tl.segLinear')}`}
-            onPointerDown={() => setState({ selectedKey: k.id })}
+            onPointerDown={e => { if (e.button === 2) e.stopPropagation(); setState({ selectedKey: k.id, selectedObjKey: null }); }}
+            onContextMenu={e => onMenu(e, k.id)}
           >
             <span>{EASING_LABELS[k.easing]}{path === 'pan' ? ' ⟳' : path === 'arc' ? ' ⌒' : ''}</span>
           </div>
@@ -71,6 +78,7 @@ function Track() {
           className={`tl-key ${k.id === selectedKey ? 'on' : ''}`}
           style={{ left: pct(k.time) }}
           onPointerDown={e => onKeyDown(e, k)}
+          onContextMenu={e => onMenu(e, k.id)}
           onPointerMove={e => {
             if (e.buttons === 1 && e.currentTarget.hasPointerCapture(e.pointerId)) updateKeyframe(k.id, { time: timeAt(e.clientX) });
           }}
@@ -78,6 +86,93 @@ function Track() {
         />
       ))}
       <div className="tl-head" style={{ left: pct(time) }} />
+    </div>
+  );
+}
+
+/** Traccia di un oggetto, sotto quella della camera. */
+function ObjectTrack({ obj, onMenu }: { obj: SceneObject; onMenu: OpenMenu }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const duration = useApp(s => s.duration);
+  const time = useApp(s => s.time);
+  const selected = useApp(s => s.selectedObjKey);
+  const t = useT();
+  const keys = obj.keys ?? [];
+  const label = objectLabel(obj);
+
+  const pct = (x: number) => `${(x / duration) * 100}%`;
+  const timeAt = (clientX: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    return ((clientX - r.left) / r.width) * duration;
+  };
+
+  return (
+    <div
+      className="tl-track obj"
+      ref={ref}
+      style={{ '--obj': colorCss(obj) } as React.CSSProperties}
+      onPointerDown={e => { if (e.button !== 0) return; pause(); e.currentTarget.setPointerCapture(e.pointerId); seek(timeAt(e.clientX)); }}
+      onPointerMove={e => { if (e.buttons === 1 && e.currentTarget.hasPointerCapture(e.pointerId)) seek(timeAt(e.clientX)); }}
+    >
+      <span className="tl-lane"><i className="obj-dot" style={{ background: colorCss(obj) }} />{label}</span>
+      {keys.slice(0, -1).map((k, i) => {
+        const next = keys[i + 1];
+        return (
+          <div key={k.id + '-seg'} className={`tl-seg ${k.easing}`} style={{ left: pct(k.time), width: pct(next.time - k.time) }}
+            title={EASING_LABELS[k.easing]}
+            onPointerDown={e => { if (e.button === 2) e.stopPropagation(); setState({ selectedObjKey: k.id, selectedKey: null, selectedId: obj.id }); }}
+            onContextMenu={e => onMenu(e, k.id, obj.id)}>
+            <span>{EASING_LABELS[k.easing]}</span>
+          </div>
+        );
+      })}
+      {keys.map(k => (
+        <div
+          key={k.id}
+          className={`tl-key ${k.id === selected ? 'on' : ''}`}
+          style={{ left: pct(k.time) }}
+          onPointerDown={e => {
+            e.stopPropagation();
+            pause();
+            setState({ selectedObjKey: k.id, selectedKey: null, selectedId: obj.id });
+            if (e.button === 2) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            seek(k.time);
+          }}
+          onContextMenu={e => onMenu(e, k.id, obj.id)}
+          onPointerMove={e => {
+            if (e.buttons === 1 && e.currentTarget.hasPointerCapture(e.pointerId)) updateObjectKey(obj.id, k.id, { time: timeAt(e.clientX) });
+          }}
+          title={t('tl.dragSubjKey', { name: label, t: k.time.toFixed(2) })}
+        />
+      ))}
+      <div className="tl-head" style={{ left: pct(time) }} />
+    </div>
+  );
+}
+
+function ObjectKeyEditor({ obj, k }: { obj: SceneObject; k: ObjectKey }) {
+  const t = useT();
+  const keys = obj.keys ?? [];
+  const isLast = keys[keys.length - 1]?.id === k.id;
+  return (
+    <div className="tl-editor">
+      <b className="obj-label"><i className="obj-dot" style={{ background: colorCss(obj) }} />{objectLabel(obj)} {k.time.toFixed(2)} s</b>
+      {isLast ? (
+        <span className="muted">{t('tl.lastKey')}</span>
+      ) : (
+        <>
+          <span className="muted">{t('tl.curve')}</span>
+          <div className="seg">
+            {EASINGS.map(e => (
+              <button key={e} className={k.easing === e ? 'on' : ''} onClick={() => updateObjectKey(obj.id, k.id, { easing: e })}>{EASING_LABELS[e]}</button>
+            ))}
+          </div>
+        </>
+      )}
+      <span className="spacer" />
+      <button onClick={() => refreshObjectKey(obj.id, k.id)} title={t('tl.subjUpdateTitle')}>{t('tl.subjUpdate')}</button>
+      <button className="danger" onClick={() => deleteObjectKey(obj.id, k.id)}>{t('tl.delete')}</button>
     </div>
   );
 }
@@ -123,7 +218,7 @@ function KeyEditor({ k }: { k: Keyframe }) {
         </>
       )}
       <span className="spacer" />
-      <button onClick={() => { seek(k.time); setKeyframe(); }} title={t('tl.updateTitle')}>{t('tl.update')}</button>
+      <button onClick={() => refreshKeyframe(k.id)} title={t('tl.updateTitle')}>{t('tl.update')}</button>
       <button className="danger" onClick={() => deleteKeyframe(k.id)}>{t('tl.delete')}</button>
     </div>
   );
@@ -138,8 +233,21 @@ export function Timeline() {
   const dirty = useApp(s => s.dirty);
   const keyframes = useApp(s => s.keyframes);
   const selectedKey = useApp(s => s.selectedKey);
+  const objects = useApp(s => s.objects);
+  const selectedId = useApp(s => s.selectedId);
+  const selectedObjKey = useApp(s => s.selectedObjKey);
+  const objectDirty = useApp(s => Object.keys(s.pendingPoses).length > 0);
   const t = useT();
+  const [menu, setMenu] = useState<KeyMenuTarget | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const openMenu: OpenMenu = (e, key, obj) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY, key, obj }); };
   const selected = keyframes.find(k => k.id === selectedKey);
+  const owner = keyOwner(store.getState(), selectedObjKey);
+  const ownerKey = owner?.keys?.find(k => k.id === selectedObjKey);
+  const current = objects.find(o => o.id === selectedId);
+  // una traccia per ogni oggetto animato, più quella dell'oggetto selezionato
+  const lanes = objects.filter(o => o.keys?.length || o.id === selectedId);
+  const anyObjectKeys = objects.some(o => o.keys?.length);
   const frame = Math.round(time * fps);
 
   return (
@@ -153,7 +261,11 @@ export function Timeline() {
         <button className={`keybtn ${dirty ? 'pulse' : ''}`} onClick={() => { pause(); setKeyframe(); }} title={t('tl.keyTitle')}>
           ◆ Keyframe
         </button>
+        <button className={`keybtn subj ${objectDirty ? 'pulse' : ''}`} disabled={!current} onClick={() => { pause(); setObjectKey(); }} title={t('tl.subjKeyTitle')}>
+          ● {current ? objectLabel(current) : t('tl.objNone')}
+        </button>
         {dirty && <span className="dirty">{t('tl.dirty')}</span>}
+        {objectDirty && <span className="dirty subj">{t('tl.subjDirty')}</span>}
         <span className="spacer" />
         <label className="inline">
           {t('tl.preset')}
@@ -177,13 +289,15 @@ export function Timeline() {
         <label className="inline">
           <input type="checkbox" checked={loop} onChange={e => setState({ loop: e.target.checked })} /> {t('tl.loop')}
         </label>
-        <button className="danger" disabled={!keyframes.length}
+        <button className="danger" disabled={!keyframes.length && !anyObjectKeys}
           onClick={() => { if (confirm(t('tl.clearConfirm'))) clearKeyframes(); }}>{t('tl.clear')}</button>
       </div>
-      <Track />
-      {selected ? <KeyEditor k={selected} /> : (
+      <Track onMenu={openMenu} />
+      {lanes.map(o => <ObjectTrack key={o.id} obj={o} onMenu={openMenu} />)}
+      {menu && <KeyMenu target={menu} onClose={closeMenu} />}
+      {selected ? <KeyEditor k={selected} /> : owner && ownerKey ? <ObjectKeyEditor obj={owner} k={ownerKey} /> : (
         <div className="tl-editor muted">
-          {keyframes.length ? t('tl.hintKeys') : t('tl.hintEmpty')}
+          {keyframes.length || anyObjectKeys ? t('tl.hintKeys') : t('tl.hintEmpty')}
         </div>
       )}
     </div>

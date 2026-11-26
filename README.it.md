@@ -30,8 +30,12 @@ risultato.
   arc shot + push, carrello laterale, zoom in.
 - **Camera a mano**: tremolio deterministico con intensità, frequenza e variante. Anteprima ed
   export coincidono fotogramma per fotogramma.
-- **Scena**: cubi, sfere, cilindri e pannelli da spostare, ruotare, scalare e colorare; il manichino
-  si può spostare e girare e se ne può regolare l'altezza.
+- **Camera in vista regia**: cliccala (o sceglila nell'elenco della scena) per spostarla con il gizmo,
+  insieme al punto mirato come su un carrello, o ruotarla sul proprio asse (panoramica, tilt, roll,
+  con l'orizzonte che resta dritto). Anche il punto mirato si può selezionare e spostare da solo.
+- **Scena**: manichini, cubi, sfere, cilindri e pannelli da aggiungere, spostare, ruotare, scalare,
+  nascondere e colorare (grigio, bianco, nero, rosso, blu, giallo, verde, arancio). La scena può anche
+  non avere manichini. Ogni manichino ha la sua altezza. Ogni oggetto si può rinominare.
 - **Scene da Blender**: importa un set GLB/glTF come oggetti separati, in grigio neutro o con i suoi
   colori, incorporato nel progetto. Vedi [Scene da Blender](#scene-da-blender).
 - **Annulla / ripeti** per keyframe, oggetti, scena e stile.
@@ -42,10 +46,14 @@ risultato.
   velocità del computer), con **traccia audio muta AAC** opzionale per i campionatori che richiedono
   l'ingresso audio.
 - **Generatore di prompt**: descrive in inglese l'inquadratura iniziale e finale e ogni tratto del
-  movimento, pronto da incollare nel modello video. Un esempio **Ref2VA**, richiuso, mostra i pezzi
+  movimento, pronto da incollare nel modello video. Una versione per il **Compiler MiniMax** e un esempio **Ref2VA**, richiuso, mostra i pezzi
   già pronti per un prompt strutturato di MiniMax H3.
 - **Progetti**: salva/apri file `.stage.json` (anche tra PC e Mac) e salvataggio automatico nel browser.
 - **Interfaccia in italiano e in inglese**.
+- **Oggetti animati**: ogni oggetto ha la sua traccia di keyframe (posizione, rotazione, scala, stesse
+  curve della camera). Un oggetto può essere il **soggetto principale**, usato da inquadrature
+  rapide, preset e prompt. Il target della camera si può agganciare, a scelta, a qualsiasi oggetto
+  (testa, petto o vita di un manichino, oppure un punto qualsiasi).
 - **Soggetto nel video guida**: manichino, cilindro, blocco (solo posizione, ingombro e direzione) o
   nessuno (solo pavimento e colonne di riferimento).
 
@@ -110,21 +118,35 @@ Clicca un keyframe ◆ o un tratto per sceglierne curva e percorso:
 **Arco** gira attorno al soggetto (orbite), **Lineare** va in linea retta (dolly, truck, crane).
 Oppure parti da un **Preset**.
 
+Per animare un oggetto, selezionalo, premi **Shift+Invio** (o il pulsante **●** con il suo nome), sposta
+la testina, sposta l'oggetto e premi di nuovo. Ogni oggetto animato ha la sua traccia sotto quella
+della camera. Se vuoi, nel pannello Camera spunta **Aggancia il target** e scegli l'oggetto (di base il
+soggetto principale): la camera resta puntata sul punto scelto e lo segue. Il prompt nomina gli altri
+oggetti con il nome che gli dai (scrivilo in inglese, es. "the red car"), altrimenti per colore e
+forma ("the red cube moves 2.0 m to the right of the frame").
+
 | Scorciatoia | Azione |
 |-------------|--------|
 | Spazio | Play / pausa |
 | Invio | Salva il keyframe (o aggiorna quello nel punto corrente) |
+| Shift + Invio | Salva un keyframe dell'oggetto selezionato |
 | Home / Fine | Inizio / fine |
 | PagSu / PagGiù | Keyframe precedente / successivo |
 | Canc | Elimina il keyframe selezionato |
+| Clic destro su un keyframe | Menu: interpolazione, percorso, vai, duplica alla testina, aggiorna, elimina |
 
 ### 3. Esporta
 Clicca **Esporta…**, scegli 720p o 1080p e premi **Esporta MP4**. Poi **Copia prompt** e usa video e
 prompt insieme nel modello video (ad esempio come riferimento di camera/movimento in MiniMax H3).
 
-La finestra mostra due prompt:
+La finestra mostra tre prompt:
 - **Prompt originale**: la descrizione del movimento di camera, da usare così com'è o da dare a un LLM
   che la inserisce in un prompt più ampio.
+- **Prompt per MiniMax Compiler**: solo il corpo narrativo, da incollare nel campo «Prompt guida ·
+  inglese» del Compiler con il ruolo «Guida camera + Subject». Il manichino è nominato per colore
+  (per associarlo al personaggio del cut) e non ci sono sezioni né `<Subject 1>`/`<Video 1>`.
+  Un oggetto semplice (per esempio un parallelepipedo per un'auto) diventa un altro soggetto da
+  associare se spunti «Rappresenta un soggetto nel video finale» nelle sue proprietà.
 - **Prompt per Ref2VA (esempio)**, richiuso sotto il primo: pezzi con le etichette
   `subject_definitions`, `retention_analysis` e `detailed_description`, con i segnaposto che imposti
   (di base `<Subject 1>` e `<Video 1>`).

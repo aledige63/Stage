@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { setState, store, useApp } from '../store';
 import { pause } from '../timeline';
 import { exportSize, exportVideo, videoSupported, type Resolution } from '../export/video';
-import { DEFAULT_TOKENS, generatePrompt, generateRef2vaPrompt } from '../export/prompt';
+import { COMPILER_LIMIT, DEFAULT_TOKENS, generateCompilerPrompt, generatePrompt, generateRef2vaPrompt } from '../export/prompt';
 import { pickSaveTarget, sanitizeFileName } from '../export/files';
 import { useT, type TKey } from '../i18n';
 import { SubjectPicker } from './Panel';
@@ -16,8 +16,10 @@ function readTokens(): typeof DEFAULT_TOKENS {
 }
 
 /** Testo del prompt modificabile, con copia, salvataggio e rigenerazione. */
-function PromptBox({ title, note, make, fileName, rows, setStatus, children, collapsed }: {
+function PromptBox({ title, note, make, fileName, rows, setStatus, children, collapsed, limit }: {
   title: TKey; note: TKey; make: () => string; fileName: string; rows: number; collapsed?: boolean;
+  /** caratteri massimi accettati dal campo di destinazione */
+  limit?: number;
   setStatus: (s: string) => void; children?: ReactNode;
 }) {
   const t = useT();
@@ -44,6 +46,12 @@ function PromptBox({ title, note, make, fileName, rows, setStatus, children, col
       <p className="muted">{t(note)}</p>
       {children}
       <textarea value={text} onChange={e => setText(e.target.value)} rows={rows} spellCheck={false} aria-label={t(title)} />
+      {limit !== undefined && (
+        <p className={text.length > limit ? 'warn' : 'muted'}>
+          {t('ex.chars', { n: text.length.toLocaleString(), max: limit.toLocaleString() })}
+          {text.length > limit && ` — ${t('ex.tooLong')}`}
+        </p>
+      )}
       <div className="row">
         <button onClick={copy}>{t('ex.copy')}</button>
         <button onClick={save}>{t('ex.saveTxt')}</button>
@@ -158,6 +166,8 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
 
         <PromptBox title="ex.prompt" note="ex.promptNote" rows={9} fileName={baseName + '.txt'}
           make={() => generatePrompt(store.getState())} setStatus={setStatus} />
+        <PromptBox title="ex.compiler" note="ex.compilerNote" rows={12} fileName={baseName + '_compiler.txt'}
+          make={() => generateCompilerPrompt(store.getState())} setStatus={setStatus} limit={COMPILER_LIMIT} />
         {/* la chiave ricrea il testo quando cambiano i segnaposto */}
         <PromptBox key={ref2vaKey} collapsed title="ex.ref2va" note="ex.ref2vaNote" rows={12} fileName={baseName + '_ref2va.txt'}
           make={() => generateRef2vaPrompt(store.getState(), tokens)} setStatus={setStatus}>

@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
-import { setState, store, type AppState } from './store';
+import { isCameraSel, setState, store, type AppState } from './store';
 import { seek } from './timeline';
 
 // Annulla / ripeti sul "documento": keyframe, oggetti, soggetto, stile, impostazioni della timeline.
@@ -8,7 +8,7 @@ import { seek } from './timeline';
 // che è salvato nei keyframe.
 
 const DOC_KEYS = [
-  'keyframes', 'objects', 'blenderScene', 'style', 'handheld', 'subjectHeight', 'duration', 'fps', 'aspect', 'loop',
+  'keyframes', 'lock', 'subjectId', 'objects', 'blenderScene', 'style', 'handheld', 'duration', 'fps', 'aspect', 'loop',
 ] as const;
 
 type Doc = Pick<AppState, (typeof DOC_KEYS)[number]>;
@@ -58,9 +58,10 @@ function apply(doc: Doc) {
   applying = true;
   try {
     const s = store.getState();
-    const selectedId = doc.objects.some(o => o.id === s.selectedId) ? s.selectedId : null;
+    const selectedId = isCameraSel(s.selectedId) || doc.objects.some(o => o.id === s.selectedId) ? s.selectedId : null;
     const selectedKey = doc.keyframes.some(k => k.id === s.selectedKey) ? s.selectedKey : null;
-    setState({ ...doc, selectedId, selectedKey, playing: false });
+    const selectedObjKey = doc.objects.some(o => o.keys?.some(k => k.id === s.selectedObjKey)) ? s.selectedObjKey : null;
+    setState({ ...doc, selectedId, selectedKey, selectedObjKey, pendingPoses: {}, playing: false });
     // la camera segue la timeline ripristinata
     seek(Math.min(store.getState().time, doc.duration));
   } finally {

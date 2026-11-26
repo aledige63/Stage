@@ -1,15 +1,19 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import { MANNEQUIN_ID, subjectScale, store, updateObject, setState, type AppState, type CameraState, type ObjectKind, type SceneObject, type StyleState } from '../store';
-import { applyToCamera, aspectValue, crane, distance, dolly, orbit, pan, pedestal, roll, step, tilt, truck, zoom } from './cameraOps';
-import { buildEnvironment, MANNEQUIN_COLORS } from './environment';
+import { CAMERA_SEL, colorCss, isCameraSel, MANNEQUIN_HEIGHT, objectHeight, store, setState, TARGET_SEL, type AppState, type CameraState, type ObjectKind, type StyleState } from '../store';
+import {
+  applyToCamera, aspectValue, cameraQuaternion, crane, distance, dolly, moveCameraTo, orbit, pan, pedestal, roll, rollCameraTo, rotateCameraTo, step, tilt,
+  truck, zoom,
+} from './cameraOps';
+import { buildEnvironment } from './environment';
 import { buildMannequin } from './mannequin';
 import { held, KEYMAP } from './input';
 import { samplePath } from './interpolation';
 import { handheldShake, type Shake } from './handheld';
 import { parseScene } from './blenderImport';
-import { advance, bindTimelineShortcuts, pause } from '../timeline';
+import { advance, bindTimelineShortcuts, moveObject, pause } from '../timeline';
+import { currentPose, effectiveCamera, objectAt, sampleObjectPath } from './subjectMotion';
 import { bindHistoryShortcuts } from '../history';
 
 const DEG = Math.PI / 180;
@@ -27,7 +31,8 @@ export let currentEngine: Engine | null = null;
 
 export interface FrameRenderer {
   canvas: HTMLCanvasElement;
-  render(camera: CameraState, shake?: Shake): void;
+  /** time: istante della timeline per la posa degli oggetti */
+  render(camera: CameraState, shake: Shake | undefined, time: number): void;
   dispose(): void;
 }
 
@@ -53,8 +58,17 @@ function makePrimitive(kind: Exclude<ObjectKind, 'manichino' | 'importato'>): TH
   return mesh;
 }
 
+function disposeTree(root: THREE.Object3D) {
+  root.traverse(o => {
+    const m = o as THREE.Mesh;
+    m.geometry?.dispose();
+    const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
+    for (const mat of mats) mat.dispose();
+  });
+}
+
 /** Materiali originali di Blender o grigio neutro, con il tono dell'oggetto. */
-function applySceneLook(node: THREE.Object3D, tone: number, look: StyleState['sceneLook']) {
+function applySceneLook(node: THREE.Object3D, color: string, look: StyleState['sceneLook']) {
   node.traverse(c => {
     const mesh = c as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -62,8 +76,7 @@ function applySceneLook(node: THREE.Object3D, tone: number, look: StyleState['sc
     mesh.userData.original ??= mesh.material;
     mesh.userData.gray ??= new THREE.MeshStandardMaterial({ roughness: 0.85, side: THREE.DoubleSide });
     const gray = mesh.userData.gray as THREE.MeshStandardMaterial;
-    const g = 0.15 + tone * 0.8;
-    gray.color.setRGB(g, g, g, THREE.SRGBColorSpace);
+    gray.color.set(color);
     mesh.material = look === 'grigio' ? gray : mesh.userData.original;
   });
 }
@@ -88,6 +101,8 @@ export class Engine {
   private orbitControls: OrbitControls;
   private gizmo: TransformControls;
   private gizmoHelper: THREE.Object3D;
+  private camHandle = new THREE.Object3D();
+  private targetHandle = new THREE.Object3D();
 
   // elementi visibili solo in vista regia
   private helpers = new THREE.Group();
@@ -103,10 +118,11 @@ export class Engine {
   private heightCanvas = document.createElement('canvas');
   private heightText = '';
   private keyMarks = new THREE.Group();
+  // percorsi degli oggetti animati e loro keyframe
+  private objectPaths = new THREE.Group();
 
   private env: THREE.Group | null = null;
   private nodes = new Map<string, THREE.Object3D>();
-  private mannMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
   // scena importata: si sposta e ruota tutta insieme
   private blenderRoot = new THREE.Group();
   private blenderRoots: THREE.Object3D[] | null = null;
@@ -137,8 +153,6 @@ export class Engine {
     this.scene.add(sun);
 
     this.env = buildEnvironment(this.scene, s.style, null);
-    this.mannMat.color.set(MANNEQUIN_COLORS[s.style.mann]);
-
     // renderer
     this.shotR = makeRenderer(els.shotCanvas);
     this.dirR = makeRenderer(els.dirCanvas);
@@ -155,9 +169,19 @@ export class Engine {
     this.gizmoHelper = this.gizmo.getHelper();
     this.scene.add(this.gizmoHelper);
     this.gizmo.addEventListener('dragging-changed', e => {
-      this.orbitControls.enabled = !(e as unknown as { value: boolean }).value;
+      const dragging = (e as unknown as { value: boolean }).value;
+      this.orbitControls.enabled = !dragging;
+      if (dragging) pause();
+      // a fine trascinamento le maniglie tornano esattamente su camera e target
+      else if (isCameraSel(store.getState().selectedId)) this.syncCameraHandles(store.getState(), true);
     });
-    this.gizmo.addEventListener('objectChange', () => this.writeBackSelected());
+    this.gizmo.addEventListener('objectChange', () => {
+      if (this.gizmo.object === this.camHandle) this.writeBackCamera();
+      else if (this.gizmo.object === this.targetHandle) this.writeBackTarget();
+      else this.writeBackSelected();
+    });
+    // maniglie invisibili a cui si aggancia il gizmo quando si seleziona camera o target
+    this.scene.add(this.camHandle, this.targetHandle);
 
     // camera disegnata in vista regia
     this.proxyCam.far = 1.2;
@@ -194,13 +218,14 @@ export class Engine {
     this.heightLabel.scale.set(0.6, 0.225, 1);
     this.heightLabel.renderOrder = 10;
     this.helpers.add(this.camHelper, this.camBody, this.aimLine, this.targetMark, this.pathLine, this.keyMarks,
-      this.heightLine, this.heightLabel);
+      this.heightLine, this.heightLabel, this.objectPaths);
     this.scene.add(this.helpers);
 
     this.scene.add(this.blenderRoot);
     this.syncBlender(s);
     this.syncObjects(s);
     this.rebuildPath(s);
+    this.rebuildObjectPaths(s);
     this.bindShotInput();
     this.bindDirectorInput();
     bindTimelineShortcuts(this.abort.signal);
@@ -213,6 +238,8 @@ export class Engine {
     this.layout();
     this.raf = requestAnimationFrame(this.tick);
     currentEngine = this;
+    // solo in sviluppo, per i controlli dalla console
+    if (import.meta.env.DEV) Object.assign((window as unknown as { stage?: object }).stage ?? {}, { engine: this });
   }
 
   dispose() {
@@ -236,14 +263,55 @@ export class Engine {
   private onStateChange(s: AppState, prev: AppState) {
     if (s.style !== prev.style) {
       this.env = buildEnvironment(this.scene, s.style, this.env);
-      this.mannMat.color.set(MANNEQUIN_COLORS[s.style.mann]);
     }
     if (s.blenderScene !== prev.blenderScene) this.syncBlender(s);
-    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo || s.subjectHeight !== prev.subjectHeight || s.style !== prev.style) {
+    if (s.objects !== prev.objects || s.selectedId !== prev.selectedId || s.gizmo !== prev.gizmo || s.style !== prev.style || s.lock !== prev.lock) {
       this.syncObjects(s);
     }
     if (s.aspect !== prev.aspect) this.layout();
     if (s.keyframes !== prev.keyframes || s.selectedKey !== prev.selectedKey) this.rebuildPath(s);
+    if (s.objects !== prev.objects || s.selectedObjKey !== prev.selectedObjKey) this.rebuildObjectPaths(s);
+  }
+
+  private rebuildObjectPaths(s: AppState) {
+    for (const child of [...this.objectPaths.children]) {
+      disposeTree(child);
+      this.objectPaths.remove(child);
+    }
+    for (const o of s.objects) {
+      if (!o.keys?.length) continue;
+      const color = new THREE.Color(colorCss(o));
+      const pts = sampleObjectPath(o.keys, 200).map(p => new THREE.Vector3(...p));
+      if (pts.length) this.objectPaths.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color })));
+      for (const k of o.keys) {
+        const selected = k.id === s.selectedObjKey;
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(selected ? 0.09 : 0.06, 12, 8),
+          new THREE.MeshBasicMaterial({ color: selected ? 0xffffff : color }),
+        );
+        m.position.set(k.pos[0], k.pos[1] + 0.02, k.pos[2]);
+        this.objectPaths.add(m);
+      }
+    }
+  }
+
+  /** Ogni oggetto segue la sua timeline (t assente = posa mostrata ora, anche se spostata a mano). */
+  private placeObjects(t?: number) {
+    const s = store.getState();
+    for (const o of s.objects) {
+      const node = this.nodes.get(o.id);
+      if (!node) continue;
+      const p = t === undefined ? currentPose(s, o) : objectAt(o, t);
+      node.position.set(...p.pos);
+      if (o.kind === 'manichino') {
+        // il manichino ruota solo attorno all'asse verticale e si scala con la sua altezza
+        node.rotation.set(0, p.rot[1] * DEG, 0);
+        node.scale.setScalar(objectHeight(o) / MANNEQUIN_HEIGHT);
+      } else {
+        node.rotation.set(p.rot[0] * DEG, p.rot[1] * DEG, p.rot[2] * DEG);
+        node.scale.set(...p.scale);
+      }
+    }
   }
 
   /** Percorso della camera e posizioni dei keyframe, visibili in vista regia. */
@@ -292,10 +360,7 @@ export class Engine {
       node.removeFromParent();
       this.nodes.delete(id);
       // gli oggetti importati restano disponibili per annulla/ripeti
-      if (node.userData.imported) continue;
-      const mesh = node as THREE.Mesh;
-      mesh.geometry?.dispose();
-      (mesh.material as THREE.Material | undefined)?.dispose();
+      if (!node.userData.imported) disposeTree(node);
     }
 
     for (const o of s.objects) {
@@ -307,32 +372,37 @@ export class Engine {
           if (!node) continue;
           node.userData.imported = true;
           this.blenderRoot.add(node);
+        } else if (o.kind === 'manichino') {
+          // materiale proprio: ogni manichino ha il suo colore
+          const mat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
+          node = buildMannequin(mat);
+          node.userData.mat = mat;
+          this.scene.add(node);
         } else {
-          node = o.kind === 'manichino' ? buildMannequin(this.mannMat) : makePrimitive(o.kind);
+          node = makePrimitive(o.kind);
           this.scene.add(node);
         }
         node.userData.id = o.id;
+        node.userData.kind = o.kind;
         this.nodes.set(o.id, node);
       }
       node.visible = !o.hidden;
-      node.position.set(...o.pos);
-      node.rotation.set(o.rot[0] * DEG, o.rot[1] * DEG, o.rot[2] * DEG);
-      if (o.kind === 'manichino') {
-        node.scale.setScalar(subjectScale(s));
-      } else if (o.kind === 'importato') {
-        node.scale.set(...o.scale);
-        applySceneLook(node, o.tone, s.style.sceneLook);
-      } else {
-        node.scale.set(...o.scale);
-        const g = 0.15 + o.tone * 0.8;
-        ((node as THREE.Mesh).material as THREE.MeshStandardMaterial).color.setRGB(g, g, g, THREE.SRGBColorSpace);
-      }
+      const color = colorCss(o);
+      if (o.kind === 'manichino') (node.userData.mat as THREE.MeshStandardMaterial).color.set(color);
+      else if (o.kind === 'importato') applySceneLook(node, color, s.style.sceneLook);
+      else ((node as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(color);
     }
+    this.placeObjects();
 
+    if (isCameraSel(s.selectedId)) {
+      this.attachCameraGizmo(s);
+      return;
+    }
+    this.gizmo.space = 'world';
     const selected = s.selectedId ? this.nodes.get(s.selectedId) : undefined;
     if (selected) {
       if (this.gizmo.object !== selected) this.gizmo.attach(selected);
-      const isMannequin = s.selectedId === 'manichino';
+      const isMannequin = selected.userData.kind === 'manichino';
       const mode = isMannequin && s.gizmo === 'scale' ? 'translate' : s.gizmo;
       this.gizmo.setMode(mode);
       // il manichino ruota solo attorno all'asse verticale
@@ -345,16 +415,77 @@ export class Engine {
     }
   }
 
+  /** Gizmo sulla camera (sposta o ruota sul proprio asse) o sul suo target (solo sposta). */
+  private attachCameraGizmo(s: AppState) {
+    const onTarget = s.selectedId === TARGET_SEL;
+    // con il target agganciato a un oggetto il punto mirato lo comanda l'oggetto
+    if (onTarget && s.lock.enabled) {
+      this.gizmo.detach();
+      return;
+    }
+    this.syncCameraHandles(s);
+    const handle = onTarget ? this.targetHandle : this.camHandle;
+    if (this.gizmo.object !== handle) this.gizmo.attach(handle);
+    const rotate = !onTarget && s.gizmo === 'rotate';
+    this.gizmo.setMode(rotate ? 'rotate' : 'translate');
+    // rotazione negli assi della camera: Y = panoramica, X = tilt, Z = roll
+    this.gizmo.space = rotate ? 'local' : 'world';
+    const onlyRoll = rotate && s.lock.enabled;
+    this.gizmo.showX = !onlyRoll;
+    this.gizmo.showY = !onlyRoll;
+    this.gizmo.showZ = true;
+  }
+
+  /** Porta le maniglie su camera e target attuali (non durante il trascinamento). */
+  private syncCameraHandles(s: AppState, force = false) {
+    if (this.gizmo.dragging && !force) return;
+    const c = effectiveCamera(s);
+    this.camHandle.position.set(...c.pos);
+    cameraQuaternion(c, this.camHandle.quaternion);
+    this.targetHandle.position.set(...c.target);
+  }
+
+  private writeBackCamera() {
+    const s = store.getState();
+    const h = this.camHandle;
+    if (this.gizmo.mode === 'rotate') {
+      // anello blu (asse dell'obiettivo) = roll; gli altri cambiano solo la direzione, con
+      // l'orizzonte che resta dov'era (come una testa panoramica)
+      const rollOnly = s.lock.enabled || this.gizmo.axis === 'Z';
+      if (rollOnly) {
+        setState({ camera: { ...s.camera, roll: rollCameraTo(effectiveCamera(s), h.quaternion).roll } });
+      } else {
+        const turned = rotateCameraTo(s.camera, h.quaternion);
+        setState({ camera: { ...turned, roll: s.camera.roll } });
+      }
+    } else {
+      setState({ camera: moveCameraTo(s.camera, [h.position.x, h.position.y, h.position.z]) });
+      h.position.set(...store.getState().camera.pos);
+    }
+  }
+
+  private writeBackTarget() {
+    const s = store.getState();
+    const p = this.targetHandle.position;
+    setState({ camera: { ...s.camera, target: [p.x, p.y, p.z] } });
+  }
+
   private writeBackSelected() {
     const node = this.gizmo.object;
     if (!node) return;
     const id = node.userData.id as string;
-    const patch: Partial<SceneObject> = {
-      pos: [node.position.x, node.position.y, node.position.z],
+    const pos: [number, number, number] = [node.position.x, node.position.y, node.position.z];
+    if (node.userData.kind === 'manichino') {
+      // direzione dal vettore "avanti": gli angoli di Eulero oltre 90° si scompongono male
+      const f = new THREE.Vector3(0, 0, 1).applyQuaternion(node.quaternion);
+      moveObject(id, { pos, rot: [0, Math.atan2(f.x, f.z) / DEG, 0] });
+      return;
+    }
+    moveObject(id, {
+      pos,
       rot: [node.rotation.x / DEG, node.rotation.y / DEG, node.rotation.z / DEG],
-    };
-    if (id !== 'manichino') patch.scale = [node.scale.x, node.scale.y, node.scale.z];
-    updateObject(id, patch);
+      scale: [node.scale.x, node.scale.y, node.scale.z],
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -456,10 +587,34 @@ export class Engine {
       );
       raycaster.setFromCamera(ndc, this.dirCam);
       const hit = raycaster.intersectObjects([...this.nodes.values()], true).find(h => isShown(h.object));
+      // camera e target si scelgono per vicinanza sullo schermo (sono piccoli); sopra un oggetto
+      // il target vince solo se il clic è proprio sul rombo
+      const near = this.pickCamera(e.clientX - rect.left, e.clientY - rect.top, rect, !!hit);
+      if (near) { setState({ selectedId: near }); return; }
       let obj: THREE.Object3D | null = hit?.object ?? null;
       while (obj && obj.userData.id === undefined) obj = obj.parent;
       setState({ selectedId: (obj?.userData.id as string | undefined) ?? null });
     }, { signal });
+  }
+
+  /** Camera o target entro qualche pixel dal clic, oppure null. */
+  private pickCamera(x: number, y: number, rect: DOMRect, overObject: boolean): string | null {
+    const s = store.getState();
+    const c = effectiveCamera(s);
+    const candidates: [string, THREE.Vector3, number][] = [
+      [CAMERA_SEL, this.camBody.position.clone(), 16],
+      [CAMERA_SEL, new THREE.Vector3(...c.pos), 16],
+    ];
+    if (!s.lock.enabled) candidates.push([TARGET_SEL, new THREE.Vector3(...c.target), overObject ? 6 : 14]);
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const [id, p, radius] of candidates) {
+      const q = p.project(this.dirCam);
+      if (q.z > 1) continue;
+      const d = Math.hypot(((q.x + 1) / 2) * rect.width - x, ((1 - q.y) / 2) * rect.height - y);
+      if (d < radius && d < bestD) { bestD = d; best = id; }
+    }
+    return best;
   }
 
   // -------------------------------------------------------------------------
@@ -498,7 +653,8 @@ export class Engine {
     const cam = new THREE.PerspectiveCamera(40, width / height, 0.05, 300);
     return {
       canvas,
-      render: (camera, shake) => {
+      render: (camera, shake, time) => {
+        this.placeObjects(time);
         applyToCamera(cam, camera, width / height, shake);
         this.renderClean(r, cam);
       },
@@ -512,17 +668,19 @@ export class Engine {
    * per sapere dove si trova.
    */
   private showSubject(forDirector: boolean) {
-    const node = this.nodes.get(MANNEQUIN_ID);
-    if (!node) return;
     const mode = store.getState().style.subject;
     const ghost = forDirector && mode === 'nessuno';
-    for (const child of node.children) {
-      const part = child.userData.part as string;
-      child.visible = part === mode || (ghost && part === 'manichino');
+    for (const node of this.nodes.values()) {
+      if (node.userData.kind !== 'manichino') continue;
+      for (const child of node.children) {
+        const part = child.userData.part as string;
+        child.visible = part === mode || (ghost && part === 'manichino');
+      }
+      const mat = node.userData.mat as THREE.MeshStandardMaterial;
+      mat.transparent = ghost;
+      mat.opacity = ghost ? 0.25 : 1;
+      mat.depthWrite = !ghost;
     }
-    this.mannMat.transparent = ghost;
-    this.mannMat.opacity = ghost ? 0.25 : 1;
-    this.mannMat.depthWrite = !ghost;
   }
 
   /** Disegna la scena senza camera, percorso, gizmo. */
@@ -555,8 +713,7 @@ export class Engine {
     this.render();
   };
 
-  private updateHelpers() {
-    const c = store.getState().camera;
+  private updateHelpers(c: CameraState) {
     this.proxyCam.position.copy(this.shotCam.position);
     this.proxyCam.quaternion.copy(this.shotCam.quaternion);
     this.proxyCam.fov = this.shotCam.fov;
@@ -604,8 +761,11 @@ export class Engine {
 
   private render() {
     const s = store.getState();
-    applyToCamera(this.shotCam, s.camera, aspectValue(s.aspect), handheldShake(s.handheld, s.time));
-    this.updateHelpers();
+    const camera = effectiveCamera(s);
+    this.placeObjects();
+    applyToCamera(this.shotCam, camera, aspectValue(s.aspect), handheldShake(s.handheld, s.time));
+    this.updateHelpers(camera);
+    if (isCameraSel(s.selectedId)) this.syncCameraHandles(s);
 
     // vista camera: niente aiuti visivi
     this.renderClean(this.shotR, this.shotCam);

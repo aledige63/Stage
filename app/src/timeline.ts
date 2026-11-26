@@ -1,6 +1,10 @@
 import * as THREE from 'three';
-import { MANNEQUIN_ID, setState, store, subjectScale, type AppState, type CameraState, type Easing, type Keyframe, type PathMode, type Vec3 } from './store';
-import { evaluate, panDelta } from './engine/interpolation';
+import {
+  setState, store, subjectScale, updateObject,
+  type AppState, type CameraState, type Easing, type Keyframe, type ObjectKey, type ObjectPose, type PathMode, type SceneObject, type TargetLock, type Vec3,
+} from './store';
+import { panDelta } from './engine/interpolation';
+import { cameraAt, currentPose, effectiveCamera, subjectAt } from './engine/subjectMotion';
 import { pan } from './engine/cameraOps';
 
 export const DURATION_MIN = 2;
@@ -8,8 +12,9 @@ export const DURATION_MAX = 15;
 export const FPS_OPTIONS = [24, 25, 30];
 
 const newKeyId = () => 'k-' + crypto.randomUUID().slice(0, 8);
+const newObjKeyId = () => 'o-' + crypto.randomUUID().slice(0, 8);
 
-const sortKeys = (keys: Keyframe[]) => [...keys].sort((a, b) => a.time - b.time);
+const sortKeys = <K extends { time: number }>(keys: K[]) => [...keys].sort((a, b) => a.time - b.time);
 
 export function snap(t: number, fps = store.getState().fps) {
   return Math.round(t * fps) / fps;
@@ -37,17 +42,24 @@ store.subscribe((s, prev) => {
   }
 });
 
+const NO_POSES: Record<string, ObjectPose> = {};
+
+const allObjectKeys = (s: AppState) => s.objects.flatMap(o => o.keys ?? []);
+
 // ---------------------------------------------------------------------------
 // Riproduzione e posizionamento
 // ---------------------------------------------------------------------------
 
-/** Sposta la testina; se ci sono keyframe la camera segue la timeline. */
+/** Sposta la testina; camera e oggetti seguono le loro timeline (e l'eventuale aggancio). */
 export function seek(t: number, opts: { snap?: boolean } = {}) {
   const s = store.getState();
   let time = THREE.MathUtils.clamp(t, 0, s.duration);
   if (opts.snap !== false) time = snap(time, s.fps);
-  if (s.keyframes.length) setFromTimeline({ time, camera: evaluate(s.keyframes, time), dirty: false });
-  else setState({ time });
+  if (s.keyframes.length || s.lock.enabled || s.objects.some(o => o.keys?.length)) {
+    setFromTimeline({ time, camera: cameraAt({ ...s, time }, time), pendingPoses: NO_POSES, dirty: false });
+  } else {
+    setState({ time, pendingPoses: NO_POSES });
+  }
 }
 
 /** Avanzamento durante la riproduzione (chiamato dall'engine a ogni fotogramma). */
@@ -83,7 +95,7 @@ export function pause() {
 export function jumpKey(dir: 1 | -1) {
   const s = store.getState();
   const eps = 0.5 / s.fps;
-  const times = s.keyframes.map(k => k.time);
+  const times = [...s.keyframes, ...allObjectKeys(s)].map(k => k.time).sort((a, b) => a - b);
   const t = dir > 0 ? times.find(x => x > s.time + eps) : [...times].reverse().find(x => x < s.time - eps);
   pause();
   seek(t ?? (dir > 0 ? s.duration : 0));
@@ -99,10 +111,13 @@ export function setKeyframe() {
   const time = snap(s.time, s.fps);
   const eps = 0.5 / s.fps;
   const existing = s.keyframes.find(k => Math.abs(k.time - time) < eps);
+  // con l'aggancio si salva il punto mirato vero, così gli archi girano attorno al soggetto
+  const camera = effectiveCamera(s);
   if (existing) {
     setFromTimeline({
-      keyframes: s.keyframes.map(k => (k === existing ? { ...k, camera: s.camera } : k)),
+      keyframes: s.keyframes.map(k => (k === existing ? { ...k, camera } : k)),
       selectedKey: existing.id,
+      selectedObjKey: null,
       dirty: false,
     });
     return;
@@ -112,12 +127,21 @@ export function setKeyframe() {
   const key: Keyframe = {
     id: newKeyId(),
     time,
-    camera: s.camera,
+    camera,
     easing: prev?.easing ?? 'inout',
     // la panoramica non si eredita: un nuovo tratto con la camera ferma lo diventa da solo
     path: prev && prev.path !== 'pan' ? prev.path : 'arc',
   };
-  setFromTimeline({ keyframes: sortKeys([...s.keyframes, key]), selectedKey: key.id, dirty: false });
+  setFromTimeline({ keyframes: sortKeys([...s.keyframes, key]), selectedKey: key.id, selectedObjKey: null, dirty: false });
+}
+
+/** Sostituisce la camera di un keyframe con quella mostrata ora, ovunque sia la testina. */
+export function refreshKeyframe(id: string) {
+  const s = store.getState();
+  if (!s.keyframes.some(k => k.id === id)) return;
+  const camera = effectiveCamera(s);
+  setFromTimeline({ keyframes: s.keyframes.map(k => (k.id === id ? { ...k, camera } : k)), selectedKey: id, selectedObjKey: null, dirty: false });
+  seek(s.keyframes.find(k => k.id === id)!.time);
 }
 
 export function updateKeyframe(id: string, patch: Partial<Omit<Keyframe, 'id'>>) {
@@ -134,8 +158,148 @@ export function deleteKeyframe(id: string) {
   else setState({ dirty: false });
 }
 
+/**
+ * Copia un keyframe nel punto indicato (di base la testina). Un keyframe già presente in quel
+ * punto viene sostituito dalla copia. Restituisce l'id della copia, o null se non serve.
+ */
+export function duplicateKeyframe(id: string, at = store.getState().time): string | null {
+  const s = store.getState();
+  const src = s.keyframes.find(k => k.id === id);
+  const time = THREE.MathUtils.clamp(snap(at, s.fps), 0, s.duration);
+  const eps = 0.5 / s.fps;
+  if (!src || Math.abs(src.time - time) < eps) return null;
+  const copy: Keyframe = { ...src, id: newKeyId(), time };
+  const rest = s.keyframes.filter(k => Math.abs(k.time - time) >= eps);
+  setState({ keyframes: sortKeys([...rest, copy]), selectedKey: copy.id, selectedObjKey: null });
+  seek(time);
+  return copy.id;
+}
+
+/** Svuota camera e oggetti; ogni oggetto resta dove si trova adesso. */
 export function clearKeyframes() {
-  setState({ keyframes: [], selectedKey: null, dirty: false, playing: false });
+  const s = store.getState();
+  setState({
+    keyframes: [],
+    objects: s.objects.map(o => (o.keys ? { ...o, ...currentPose(s, o), keys: undefined } : o)),
+    selectedKey: null,
+    selectedObjKey: null,
+    pendingPoses: NO_POSES,
+    dirty: false,
+    playing: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Oggetti: timeline propria e aggancio del target
+// ---------------------------------------------------------------------------
+
+const mapObject = (id: string, fn: (o: SceneObject) => SceneObject) =>
+  store.getState().objects.map(o => (o.id === id ? fn(o) : o));
+
+/**
+ * Sposta un oggetto. Senza keyframe cambia la sua posa fissa; con i keyframe la nuova posa
+ * resta in sospeso finché non la si salva con setObjectKey (come la camera).
+ */
+export function moveObject(id: string, patch: Partial<ObjectPose>) {
+  const s = store.getState();
+  const o = s.objects.find(x => x.id === id);
+  if (!o) return;
+  if (o.keys?.length) setState({ pendingPoses: { ...s.pendingPoses, [id]: { ...currentPose(s, o), ...patch } } });
+  else updateObject(id, patch);
+}
+
+/** Salva la posa attuale dell'oggetto come keyframe nel punto corrente. */
+export function setObjectKey(id = store.getState().selectedId) {
+  const s = store.getState();
+  const o = s.objects.find(x => x.id === id);
+  if (!o) return;
+  const time = snap(s.time, s.fps);
+  const eps = 0.5 / s.fps;
+  const { pos, rot, scale } = currentPose(s, o);
+  const keys = o.keys ?? [];
+  const existing = keys.find(k => Math.abs(k.time - time) < eps);
+  let keyId: string;
+  let next: ObjectKey[];
+  if (existing) {
+    keyId = existing.id;
+    next = keys.map(k => (k === existing ? { ...k, pos, rot, scale } : k));
+  } else {
+    keyId = newObjKeyId();
+    const prev = [...keys].reverse().find(k => k.time < time);
+    next = sortKeys([...keys, { id: keyId, time, pos, rot, scale, easing: prev?.easing ?? 'inout' }]);
+  }
+  const { [o.id]: _saved, ...pendingPoses } = s.pendingPoses;
+  setFromTimeline({ objects: mapObject(o.id, x => ({ ...x, keys: next })), selectedObjKey: keyId, selectedKey: null, pendingPoses });
+  seek(store.getState().time);
+}
+
+/** Sostituisce la posa di un keyframe dell'oggetto con quella mostrata ora. */
+export function refreshObjectKey(objId: string, keyId: string) {
+  const s = store.getState();
+  const o = s.objects.find(x => x.id === objId);
+  const key = o?.keys?.find(k => k.id === keyId);
+  if (!o || !key) return;
+  const { pos, rot, scale } = currentPose(s, o);
+  const { [objId]: _saved, ...pendingPoses } = s.pendingPoses;
+  setFromTimeline({
+    objects: mapObject(objId, x => ({ ...x, keys: (x.keys ?? []).map(k => (k.id === keyId ? { ...k, pos, rot, scale } : k)) })),
+    selectedObjKey: keyId,
+    selectedKey: null,
+    pendingPoses,
+  });
+  seek(key.time);
+}
+
+export function updateObjectKey(objId: string, keyId: string, patch: Partial<Omit<ObjectKey, 'id'>>) {
+  const s = store.getState();
+  if (patch.time !== undefined) patch.time = THREE.MathUtils.clamp(snap(patch.time, s.fps), 0, s.duration);
+  setState({ objects: mapObject(objId, o => ({ ...o, keys: sortKeys((o.keys ?? []).map(k => (k.id === keyId ? { ...k, ...patch } : k))) })) });
+  seek(store.getState().time);
+}
+
+export function deleteObjectKey(objId: string, keyId: string) {
+  const s = store.getState();
+  setState({
+    objects: mapObject(objId, o => {
+      const keys = (o.keys ?? []).filter(k => k.id !== keyId);
+      // l'ultimo keyframe eliminato lascia l'oggetto dove si trovava
+      return keys.length ? { ...o, keys } : { ...o, ...currentPose(s, o), keys: undefined };
+    }),
+    selectedObjKey: s.selectedObjKey === keyId ? null : s.selectedObjKey,
+  });
+  seek(s.time);
+}
+
+/** Come duplicateKeyframe, per i keyframe di un oggetto. */
+export function duplicateObjectKey(objId: string, keyId: string, at = store.getState().time): string | null {
+  const s = store.getState();
+  const o = s.objects.find(x => x.id === objId);
+  const src = o?.keys?.find(k => k.id === keyId);
+  const time = THREE.MathUtils.clamp(snap(at, s.fps), 0, s.duration);
+  const eps = 0.5 / s.fps;
+  if (!o || !src || Math.abs(src.time - time) < eps) return null;
+  const copy: ObjectKey = { ...src, id: newObjKeyId(), time };
+  const rest = (o.keys ?? []).filter(k => Math.abs(k.time - time) >= eps);
+  const { [objId]: _dropped, ...pendingPoses } = s.pendingPoses;
+  setState({
+    objects: mapObject(objId, x => ({ ...x, keys: sortKeys([...rest, copy]) })),
+    selectedObjKey: copy.id,
+    selectedKey: null,
+    selectedId: objId,
+    pendingPoses,
+  });
+  seek(time);
+  return copy.id;
+}
+
+/** Proprietario di un keyframe di oggetto. */
+export function keyOwner(s: AppState, keyId: string | null) {
+  return keyId ? s.objects.find(o => o.keys?.some(k => k.id === keyId)) ?? null : null;
+}
+
+export function setLock(patch: Partial<TargetLock>) {
+  setState(s => ({ lock: { ...s.lock, ...patch } }));
+  seek(store.getState().time);
 }
 
 /** Cambiare durata riscala i keyframe, così il movimento mantiene le sue proporzioni. */
@@ -146,6 +310,7 @@ export function setDuration(d: number) {
   setState({
     duration,
     keyframes: s.keyframes.map(key => ({ ...key, time: key.time * k })),
+    objects: s.objects.map(o => (o.keys ? { ...o, keys: o.keys.map(key => ({ ...key, time: key.time * k })) } : o)),
   });
   seek(s.time * k, { snap: false });
 }
@@ -153,7 +318,10 @@ export function setDuration(d: number) {
 export function setFps(fps: number) {
   setState({ fps });
   const s = store.getState();
-  setState({ keyframes: s.keyframes.map(k => ({ ...k, time: snap(k.time, fps) })) });
+  setState({
+    keyframes: s.keyframes.map(k => ({ ...k, time: snap(k.time, fps) })),
+    objects: s.objects.map(o => (o.keys ? { ...o, keys: o.keys.map(k => ({ ...k, time: snap(k.time, fps) })) } : o)),
+  });
   seek(s.time);
 }
 
@@ -260,12 +428,16 @@ export function applyPreset(id: PresetId) {
     return;
   }
   const s = store.getState();
-  const subject = s.objects.find(o => o.id === MANNEQUIN_ID)!;
+  // la camera segue la posizione del soggetto ma non le sue rotazioni
+  // senza soggetto i preset girano attorno al centro della scena
+  const center = { pos: [0, 0, 0] as Vec3, yaw: 0 };
+  const start = subjectAt(s, 0) ?? center;
+  const end = subjectAt(s, s.duration) ?? center;
   const p = PRESET_SHOTS[id];
   const k = subjectScale(s);
   const keyframes: Keyframe[] = [
-    { id: newKeyId(), time: 0, camera: shotCamera(subject.pos, subject.rot[1], p.from, k), easing: p.easing, path: p.path },
-    { id: newKeyId(), time: s.duration, camera: shotCamera(subject.pos, subject.rot[1], p.to, k), easing: p.easing, path: p.path },
+    { id: newKeyId(), time: 0, camera: shotCamera(start.pos, start.yaw, p.from, k), easing: p.easing, path: p.path },
+    { id: newKeyId(), time: s.duration, camera: shotCamera(end.pos, start.yaw, p.to, k), easing: p.easing, path: p.path },
   ];
   setState({ keyframes, selectedKey: null, playing: false });
   seek(0);
@@ -281,13 +453,17 @@ export function bindTimelineShortcuts(signal: AbortSignal) {
     const s = store.getState();
     switch (e.code) {
       case 'Space': togglePlay(); break;
-      case 'Enter': case 'NumpadEnter': pause(); setKeyframe(); break;
+      case 'Enter': case 'NumpadEnter': pause(); if (e.shiftKey) setObjectKey(); else setKeyframe(); break;
       case 'Home': pause(); seek(0); break;
       case 'End': pause(); seek(s.duration); break;
       case 'PageUp': jumpKey(-1); break;
       case 'PageDown': jumpKey(1); break;
       case 'Delete':
         if (s.selectedKey) deleteKeyframe(s.selectedKey);
+        else if (s.selectedObjKey) {
+          const owner = keyOwner(s, s.selectedObjKey);
+          if (owner) deleteObjectKey(owner.id, s.selectedObjKey);
+        }
         else return;
         break;
       default: return;

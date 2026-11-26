@@ -7,8 +7,6 @@ export const PALETTE = {
   scuro: { sky: 0x262626, ground: 0x2e2e2e, major: 0xb0b0b0, minor: 0x5c5c5c, check: 0x444444 },
 };
 
-export const MANNEQUIN_COLORS = { grigio: 0xa8a8a8, bianco: 0xf2f2f2, arancio: 0xe07b39 };
-
 function checkerTexture(a: number, b: number) {
   const c = document.createElement('canvas');
   c.width = c.height = 128;

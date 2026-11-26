@@ -4,6 +4,61 @@ All notable changes to Stage are listed here. Versions follow MAJOR.MINOR.PATCH.
 Tutte le modifiche rilevanti di Stage sono elencate qui (in inglese; il diario di sviluppo in
 italiano è in [PIANO.md](PIANO.md)).
 
+## [0.9.0] — 2026-11-26
+
+### Added
+- **Animated objects**: every object has its own keyframe track (position, rotation, scale, with the
+  same curves as the camera); Shift+Enter or the **●** button saves a pose; paths in the director view.
+- **Colors** for every object and mannequin: gray (with tone), white, black, red, blue, yellow, green,
+  orange.
+- **Mannequins are regular objects**: add as many as needed, each with its own height and color, or
+  none at all.
+- **Main subject**: any object (or none) drives quick framing, presets, the prompt and the target lock.
+- **Optional target lock** on any object: the camera stays aimed at a mannequin's head, chest or waist,
+  or any point of an object, following it as it moves.
+- **Object names**: every object and mannequin can be renamed; the name is used in the prompt.
+- The prompt describes moving objects relative to the camera, naming them by color and shape, and
+  works without a subject.
+- **Keyframe menu**: right-click a keyframe (or the segment after it), on the camera track or an
+  object track, to pick the interpolation, the camera path, go to it, duplicate it at the playhead,
+  update it or delete it.
+
+- **Camera selectable in the director view**: click it or pick it in the scene list; the gizmo moves
+  it with its aim point (like a dolly) or rotates it on its own axis (pan and tilt keep the horizon,
+  the lens axis sets the roll). The aim point can be selected and moved on its own; with the target
+  locked to an object only the camera position and roll can be changed.
+- **Prompt for MiniMax Compiler**: a third prompt in the export window, only the narrative body to paste
+  into the Compiler's guide prompt field. It declares a combined camera + character guide when the
+  mannequins move, names each mannequin by color for the mapping, uses no `<Subject 1>`/`<Video 1>`
+  tokens or reserved sections, describes the character's path by direction (as seen in the frame)
+  instead of meters while the camera is still, and while the camera moves asks to preserve the
+  character's changing screen position and distance as in the reference; says when camera and
+  character stop together, and ends with the final composition. A still mannequin also gets the
+  combined role (position and orientation), since the Compiler has no separate role for it.
+  Saved as `_compiler.txt`. A character counter shows the length against the Compiler's 2,500
+  limit and warns when the text is over it.
+- **Objects that stand for a subject**: any simple shape or imported object can be marked "Stands for
+  a subject in the final video" (a car, an animal…). In the Compiler prompt it becomes a subject to
+  map, named by color and shape ("the white box"), with its path, the moment it stops (still in the
+  scene while the camera keeps moving) and its place in the opening and final frames, also relative
+  to the character; otherwise it stays a set block not to reproduce.
+
+### Fixed
+- **Prompt when the subject starts off screen** (H3 test feedback): the opening frame now describes
+  a static view of the scene and says the subject is not in frame yet; the prompt tells when the
+  subject or a moving object enters or leaves the frame and from which side; the camera holding
+  still before its first keyframe is described; all lines are in time order.
+- The shot size (close-up, full shot…) is measured from how much of the figure is actually inside
+  the frame: a figure with the feet cut off is now a "medium full shot with the lower legs and feet
+  extending beyond the bottom edge", no longer a "full shot". The prompt also says which way the
+  figure faces in the frame.
+- **Update with current camera / position** now keeps the change made after selecting the keyframe
+  (it used to save the keyframe's old values).
+
+### Changed
+- The guide-video style no longer has a mannequin color: each mannequin has its own. Older projects
+  are converted when opened.
+
 ## [0.8.0] — 2026-11-19
 
 ### Added

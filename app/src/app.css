@@ -8,6 +8,7 @@
   --text: #e6e8eb;
   --muted: #8b919c;
   --accent: #f0a050;
+  --subj: #4fc3f7;
   --accent-text: #1a1206;
   --danger: #d9534f;
 }
@@ -135,6 +136,14 @@ kbd {
 .objects li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 10px; cursor: pointer; border-bottom: 1px solid var(--line); }
 .obj-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obj-name.off { opacity: 0.45; }
+.obj-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 6px; }
+.swatches button { height: 22px; padding: 0; border-radius: 4px; border: 2px solid transparent; }
+.swatches button.on { border-color: var(--text); }
+.seg.wrap { flex-wrap: wrap; }
+.seg.wrap button { flex: 1 0 30%; }
+.panel select { width: 100%; }
+.obj-rename { width: 100%; background: var(--field); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; }
 .obj-eye { flex: none; padding: 0 5px; border: none; background: none; color: inherit; font-size: 11px; }
 .objects li:last-child { border-bottom: none; }
 .objects li:hover { background: var(--btn-hover); }
@@ -202,6 +211,10 @@ kbd {
 .keybtn { font-weight: 600; }
 .keybtn.pulse { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .dirty { color: var(--accent); font-size: 12px; }
+.keybtn.subj { color: var(--subj); }
+.keybtn.subj.pulse { background: var(--subj); color: #0d1a22; border-color: var(--subj); }
+.dirty.subj { color: var(--subj); }
+.obj-label { white-space: nowrap; }
 .spacer { flex: 1; }
 .muted { color: var(--muted); font-size: 12px; }
 label.inline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -254,6 +267,38 @@ select, label.inline input[type=number] {
 .tl-key.on { background: #fff; box-shadow: 0 0 0 2px var(--accent); }
 .tl-head { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fff; pointer-events: none; z-index: 3; }
 .tl-head::before { content: ''; position: absolute; top: -2px; left: -5px; border: 6px solid transparent; border-top-color: #fff; }
+
+.tl-track.obj { height: 34px; margin-top: 0; }
+.tl-track.obj .tl-seg { top: 12px; background: color-mix(in srgb, var(--obj) 22%, transparent); border-top-color: var(--obj); }
+.tl-track.obj .tl-key { top: 13px; background: var(--obj); border-radius: 50%; transform: none; }
+.tl-track.obj .tl-key.on { background: #fff; box-shadow: 0 0 0 2px var(--subj); }
+.tl-lane { position: absolute; left: 4px; top: 0; font-size: 9px; color: var(--muted); pointer-events: none; }
+
+/* menu del clic destro sui keyframe */
+.key-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 230px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+.key-menu .km-head { display: flex; align-items: center; gap: 6px; padding: 4px 8px 6px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
+.key-menu .km-label { padding: 6px 8px 2px; font-size: 11px; color: var(--muted); }
+.key-menu .km-note { padding: 6px 8px; font-size: 12px; color: var(--muted); max-width: 240px; }
+.key-menu button {
+  display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 4px 8px;
+  background: none; border: 0; border-radius: 4px; color: var(--text); text-align: left; font: inherit; cursor: pointer;
+}
+.key-menu button small { margin-left: auto; padding-left: 12px; color: var(--muted); font-size: 11px; }
+.key-menu button:hover:not(:disabled), .key-menu button:focus-visible { background: var(--btn-hover); outline: none; }
+.key-menu button.on { color: var(--accent); }
+.key-menu button:disabled { color: var(--muted); opacity: .5; cursor: default; }
+.key-menu button.danger { color: var(--danger); }
+.key-menu .km-check { display: inline-block; width: 12px; flex: none; }
+.key-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 
 .tl-editor { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; margin-top: 6px; }
 .tl-editor .seg { margin: 0; }

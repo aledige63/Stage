@@ -20,8 +20,8 @@ Versione attuale: **v0.6.0** (vedi [CHANGELOG.md](CHANGELOG.md)).
 | 5 | Fondamenta e interfaccia: annulla/ripeti, test, pannello destro, misure camera e soggetto | ✅ Completata (v0.6.0) |
 | 6 | Import di scene da Blender (GLB) | ✅ Completata (v0.7.0) |
 | 7 | Prompt per Ref2VA (accanto all'originale) | ✅ Completata (v0.8.0) |
-| 8 | Soggetto in movimento e target agganciato al soggetto | 🔄 Prossima |
-| 9 | Spline sul percorso della camera | ⏳ Da iniziare |
+| 8 | Soggetto in movimento e target agganciato al soggetto | ✅ Prima parte completata (v0.9.0), resta la 8b |
+| 9 | Spline sui percorsi di camera e oggetti, interpolazione dal keyframe | ⏳ Da iniziare |
 | 10 | Strumenti: export immagini, legenda tasti, scorciatoie solidi, libreria movimenti | ⏳ Da iniziare |
 | 11 | Più personaggi e pose pronte (solo se i test della fase 8 lo giustificano) | ⏳ Condizionata |
 
@@ -203,22 +203,51 @@ parola il testo di Stage, quindi il testo descrittivo resta; l'utente lo incolla
 - [x] Verifica sul flusso reale dell'utente: all'LLM basta il prompt originale; l'esempio Ref2VA resta come riferimento
 
 ### Fase 8 — Soggetto in movimento e target agganciato (vitale)
-- [ ] **Keyframe del soggetto** nella timeline (posizione e rotazione), su una traccia separata da
-      quella della camera, con le stesse curve
-- [ ] **Target agganciato al soggetto**: punto posizionabile liberamente sul soggetto (testa, petto o
-      qualsiasi punto, con il gizmo) che segue posizione e rotazione del soggetto; la camera lo insegue
-- [ ] Possibilità di sganciare il target; preset di camera che tengono conto del movimento
+Divisa in due parti (accordo con l'utente, 2026-11-19).
+
+**8a — soggetto e aggancio**
+- [x] **Keyframe del soggetto** nella timeline (posizione e rotazione), su una traccia separata da
+      quella della camera, con le stesse curve; Shift+Invio o "● Soggetto"; percorso in vista regia
+- [x] **Target agganciato al soggetto**, facoltativo (richiesta utente): testa, petto, vita o punto
+      libero con i campi X/Y/Z nel riferimento del soggetto; segue posizione e rotazione
+- [x] Target sganciabile; i preset partono e arrivano dove si trova il soggetto (senza seguirne le
+      rotazioni)
+- [x] Il prompt descrive il soggetto rispetto alla camera ("moves 3.0 m toward the camera", "turns 90
+      degrees to its left") e l'aggancio ("stays aimed at the subject's head")
+- [ ] **Test H3** di 8a
+
+**8a bis — oggetti animati e colori** (richiesta utente, 2026-11-19, per il test H3)
+- [x] Colori per oggetti e manichini: grigio (con tono), bianco, nero, rosso, blu, giallo, verde, arancio
+- [x] Il manichino è un oggetto come gli altri: se ne possono aggiungere più d'uno, eliminare, oppure
+      fare una scena di soli oggetti; ognuno ha altezza e colore propri
+- [x] Ogni oggetto ha la sua timeline (posizione, rotazione, scala); una traccia per oggetto animato
+- [x] Soggetto principale scelto tra gli oggetti (o nessuno): inquadrature, preset, aggancio, prompt
+- [x] Prompt: oggetti nominati per colore e forma ("the red cube"); funziona anche senza soggetto
+- [x] Progetti precedenti convertiti all'apertura (colore, altezza e keyframe del vecchio manichino)
+- [x] Nome modificabile per ogni oggetto e manichino, usato anche nel prompt così com'è scritto
+- [x] Target della camera agganciabile a qualsiasi oggetto (di base il soggetto principale)
+
+**8b — inseguimento**
+- [ ] Camera che accompagna il soggetto mantenendo la distanza (carrello parallelo, inseguimento
+      alle spalle), oltre al solo aggancio dello sguardo
+- [ ] Punto di aggancio spostabile con il gizmo in vista regia
 - [ ] Varianti per i test: manichino che scivola, cilindro/blocco al suo posto, semplice camminata ciclica
 - [ ] **Test H3**, es. manichino che va verso la camera mentre la camera gli va incontro:
       verificare che il personaggio non "scivoli" e che il movimento venga letto correttamente
-- [ ] Il prompt descrive anche il movimento del soggetto
 
-### Fase 9 — Spline sul percorso della camera
+### Fase 9 — Spline sui percorsi di camera e oggetti
 - [ ] **Maniglie sul percorso** (vista regia): ogni keyframe ha due maniglie trascinabili che curvano
       la traiettoria nello spazio (archi asimmetrici, curve a S, aggiramenti di ostacoli)
+- [ ] **Su tutti gli oggetti in scena** (richiesta utente, 2026-11-20): non solo la camera, anche
+      manichini e solidi animati usano le stesse maniglie sul proprio percorso
 - [ ] Maniglie allineate (movimento senza scatti) o spezzate
+- [x] **Clic destro su un keyframe** nella timeline (camera e oggetti) per scegliere l'interpolazione
+      del tratto che parte da lì: lineare, accelera, rallenta, accelera e rallenta, fermo; per la
+      camera anche il percorso; vai, duplica alla testina, aggiorna, elimina (richiesta utente,
+      anticipato il 2026-11-20, esce con la v0.9.0)
+- [ ] Nel menu del clic destro, voce "spline" quando ci saranno le maniglie
 - [ ] Le maniglie si salvano nel progetto; i progetti esistenti restano validi (maniglie automatiche)
-- [ ] Il prompt descrive anche i percorsi curvi
+- [ ] Il prompt descrive anche i percorsi curvi, della camera e degli oggetti
 
 ### Fase 10 — Strumenti
 - [ ] **Export di immagini**: fotogramma corrente, primo e ultimo fotogramma, un'immagine per keyframe
@@ -363,3 +392,68 @@ Si fa solo se i test della fase 8 mostrano che posa e movimento del soggetto inf
   esempio, richiuso, sotto. Non pubblicato.
 - **2026-11-19** — Test in H3 di panoramica e barrel roll: ok (riscontro utente). Fase 7 chiusa:
   si usa il prompt originale. Pubblicato come **v0.8.0**. Prossima: fase 8 (soggetto in movimento).
+- **2026-11-19** — Fase 8a realizzata: traccia del soggetto nella timeline, aggancio facoltativo del
+  target (testa/petto/vita/punto libero), percorso del soggetto in vista regia, preset e prompt che
+  tengono conto del movimento. Provata nel browser con export. Manca il test in H3. Non pubblicato.
+- **2026-11-19** — Richiesta dell'utente prima del test H3: colori, manichino come oggetto qualsiasi (anche
+  più di uno o nessuno), timeline per ogni oggetto. Realizzato come "8a bis" con soggetto principale
+  scelto tra gli oggetti; formato progetto v3 con conversione dei vecchi file. 50 test, provato nel
+  browser con export (cubo rosso animato e manichino blu). Non pubblicato.
+- **2026-11-19** — Nomi modificabili per oggetti e manichini (usati nel prompt) e target agganciabile a
+  qualsiasi oggetto. 51 test, provato nel browser. Non pubblicato.
+- **2026-11-20** — Fase 9 ampliata su richiesta dell'utente: le spline valgono per tutti gli oggetti
+  in scena, non solo per la camera; clic destro sui keyframe per scegliere l'interpolazione.
+- **2026-11-20** — Anticipato il menu del clic destro sui keyframe (camera e oggetti, anche sui
+  tratti): interpolazione, percorso, vai, duplica alla testina, aggiorna, elimina. Corretto
+  "Aggiorna con camera attuale", che salvava i valori vecchi del keyframe. 55 test, provato nel
+  browser. Non pubblicato.
+- **2026-11-20** — Segnalazione dell'utente: la camera non si poteva selezionare in vista regia.
+  Ora si seleziona con un clic (o dall'elenco della scena) e il gizmo la sposta insieme al punto
+  mirato o la ruota sul proprio asse (panoramica e tilt con l'orizzonte dritto, roll sull'asse
+  dell'obiettivo); anche il target si seleziona e si sposta da solo. Con il target agganciato si
+  cambiano solo posizione e roll. 59 test, provato nel browser. Non pubblicato.
+- **2026-11-26** — Test H3 dell'utente (Anna fuori campo all'inizio, entra dopo circa 1 s): il prompt
+  descriveva un primo piano iniziale inesistente. Cause: grandezza dell'inquadratura calcolata sulla
+  distanza dal punto mirato, nessun controllo di chi è in campo, frasi non in ordine di tempo e
+  camera ferma iniziale non descritta. Corretto: apertura "static view of the scene … not in frame
+  yet", frasi "At 0.5s … enters the frame from the right" (anche uscite e oggetti in movimento),
+  tutto in ordine di tempo, grandezza sulla distanza del soggetto. 62 test. Non pubblicato; da
+  ripetere il test in H3.
+- **2026-11-26** — Analisi dell'export per il Compiler MiniMax (fatta dall'utente con un altro
+  strumento): il TXT Ref2VA viene rifiutato perché contiene sezioni riservate; servono ruolo
+  combinato camera + Subject, mapping del manichino per colore, niente `<Subject 1>`/`<Video 1>`
+  fissi, inquadratura finale reale (i piedi erano fuori campo ma il testo diceva "full shot") e
+  direzioni chiarite. Fatto: terzo prompt "Prompt per MiniMax Compiler" (solo corpo narrativo,
+  `_compiler.txt`); grandezza dell'inquadratura misurata su quanto del corpo resta nei bordi, con
+  la parte tagliata e la direzione dello sguardo; vale anche per gli altri due prompt. 64 test.
+  Da fare più avanti (proposta dell'analisi): "Importa guida Stage" nel Compiler con MP4 + dati
+  strutturati (JSON con durata, ruolo, timeline, figure da associare).
+- **2026-11-26** — Seconda verifica nel Compiler: testo accettato dal validatore (1.943/2.500
+  caratteri), associazione per colore valida anche con slot diversi da 1. Correzioni: mentre la
+  camera si muove per oltre metà del tratto, il percorso della figura non dice più "da destra a
+  sinistra" ma chiede di conservare posizione sullo schermo e distanza come nel video guida;
+  figura ferma con ruolo combinato (posizione e orientamento), non "camera e posizione"; i blocchi
+  "non vanno riprodotti, l'ambiente arriva dai riferimenti". I metri del carrello restano (dato
+  di Stage; la guida §4.3 chiede ampiezza e velocità quando significative). Da concordare nel
+  futuro formato di scambio: il caso della figura ferma e il trasferimento formale del layout dei
+  blocchi. Prossimo passo: prompt completo dal Compiler e prova in H3.
+- **2026-11-26** — L'utente anima il parallelepipedo "Auto" (arriva e si ferma a 4,4 s): deve essere
+  un secondo soggetto in MiniMax, ma il prompt Compiler lo trattava come blocco di scena. Aggiunta
+  l'opzione oggetto "Rappresenta un soggetto nel video finale" (`mapped`): nel prompt Compiler
+  diventa "the white box", associato come soggetto, con percorso, arresto ("comes to a stop and
+  remains still"), posizione in apertura e chiusura. Con la camera in movimento il percorso
+  conserva "approaching the camera" (la profondità resta vera), toglie solo il lato. Pause che
+  finiscono insieme unite ("the camera and … remain stationary"). 66 test.
+- **2026-11-26** — Terza verifica nel Compiler (due associazioni nello stesso Video guida: funziona):
+  il testo era 2.510 caratteri, oltre il limite di 2.500 del campo guida. Corretto: formulazione
+  più corta suggerita ("The red mannequin and white box represent their assigned subjects'
+  movement, position and orientation… Render the assigned subjects, not the mannequin or box
+  shapes. Exclude the floor grid…"), righe separate da un solo a capo, "the character" dopo la
+  prima menzione se è l'unico personaggio, frase finale "Transfer…" solo con soli manichini e solo
+  se ci sta; contatore caratteri con avviso nella finestra di export. Posizione degli oggetti
+  calcolata sull'ingombro visibile (prima diceva "al centro", nella clip è a sinistra) e rispetto al
+  personaggio. Arresto: "remains stationary in the scene while the camera continues moving until
+  6.0s". Testo d'esempio: 2.328 caratteri. 65 test.
+- **2026-11-26** — Test H3 dal prompt del Compiler (personaggio + auto associata al parallelepipedo,
+  export_00003.mp4): risultato soddisfacente secondo l'utente. L'unico difetto notato era nel
+  Compiler, non nel testo di Stage. Pubblicato come **v0.9.0**.

@@ -1,4 +1,4 @@
-import { DEFAULT_CAMERA, DEFAULT_STYLE, MANNEQUIN_HEIGHT, MANNEQUIN_ID, setState, store, type AppState } from './store';
+import { DEFAULT_CAMERA, DEFAULT_LOCK, DEFAULT_MANNEQUIN, DEFAULT_STYLE, MANNEQUIN_ID, setState, store, type AppState, type ColorId, type ObjectKey, type SceneObject, type Vec3 } from './store';
 import { pickSaveTarget, sanitizeFileName } from './export/files';
 import { t } from './i18n';
 import { clearHistory } from './history';
@@ -7,15 +7,15 @@ import { clearHistory } from './history';
 // temporaneo dell'interfaccia (testina, selezione, riproduzione).
 
 const FORMAT = 'stage-project';
-const VERSION = 2;
+const VERSION = 3;
 const AUTOSAVE_KEY = 'stage:autosave';
 // il file della scena può superare il limite di localStorage: nel salvataggio automatico sta in IndexedDB
 const SCENE_DB = 'stage';
 const SCENE_STORE = 'scene';
 
 const SAVED_KEYS = [
-  'projectName', 'exportRes', 'exportAudio', 'duration', 'fps', 'keyframes', 'loop',
-  'aspect', 'thirds', 'center', 'safe', 'handheld', 'subjectHeight', 'camera', 'speed', 'objects', 'blenderScene', 'style',
+  'projectName', 'exportRes', 'exportAudio', 'duration', 'fps', 'keyframes', 'lock', 'subjectId', 'loop',
+  'aspect', 'thirds', 'center', 'safe', 'handheld', 'camera', 'speed', 'objects', 'blenderScene', 'style',
 ] as const;
 
 type SavedState = Pick<AppState, (typeof SAVED_KEYS)[number]>;
@@ -46,9 +46,20 @@ export function validate(raw: unknown): SavedState {
   if (typeof f.version === 'number' && f.version > VERSION) {
     throw new Error(t('err.newerVersion'));
   }
-  const d = f.data as Partial<SavedState>;
-  if (!Array.isArray(d.objects) || !d.objects.some(o => o.id === MANNEQUIN_ID)) throw new Error(t('err.noMannequin'));
+  const d = f.data as Partial<SavedState> & Legacy;
+  // la scena può anche non avere manichini (dalla versione 3)
+  if (!Array.isArray(d.objects)) throw new Error(t('err.badObject', { name: '?' }));
   if (!Array.isArray(d.keyframes)) throw new Error(t('err.noKeyframes'));
+  if (d.subjectKeys !== undefined) {
+    if (!Array.isArray(d.subjectKeys)) throw new Error(t('err.badKeyframe'));
+    for (const k of d.subjectKeys) if (typeof k.time !== 'number' || !isVec3(k.pos) || typeof k.yaw !== 'number') throw new Error(t('err.badKeyframe'));
+  }
+  for (const o of d.objects) {
+    for (const k of o.keys ?? []) {
+      if (typeof k.time !== 'number' || !isVec3(k.pos) || !isVec3(k.rot) || !isVec3(k.scale)) throw new Error(t('err.badKeyframe'));
+    }
+  }
+  if (d.lock !== undefined && !isVec3(d.lock?.offset)) throw new Error(t('err.badKeyframe'));
   const b = d.blenderScene;
   if (b && (typeof b.id !== 'string' || typeof b.glb !== 'string' || !isVec3(b.offset))) throw new Error(t('err.badScene'));
   for (const o of d.objects) if (!isVec3(o.pos) || !isVec3(o.rot) || !isVec3(o.scale)) throw new Error(t('err.badObject', { name: o.name }));
@@ -58,18 +69,43 @@ export function validate(raw: unknown): SavedState {
   return d as SavedState;
 }
 
-function applyData(d: SavedState) {
+/** Campi dei progetti precedenti (versioni 1 e 2), convertiti all'apertura. */
+interface Legacy {
+  subjectHeight?: number;
+  subjectKeys?: { id: string; time: number; pos: Vec3; yaw: number; easing: ObjectKey['easing'] }[];
+}
+
+const LEGACY_MANN_COLORS: Record<string, ColorId> = { grigio: 'grigio', bianco: 'bianco', arancio: 'arancio' };
+
+function migrateObjects(d: SavedState & Legacy): SceneObject[] {
+  const mann = LEGACY_MANN_COLORS[(d.style as { mann?: string } | undefined)?.mann ?? ''] ?? 'grigio';
+  return d.objects.map(o => {
+    if (o.id !== MANNEQUIN_ID || o.color) return o;
+    // il vecchio manichino unico: colore dallo stile, altezza e keyframe del soggetto
+    const keys = d.subjectKeys?.map(k => ({ id: k.id, time: k.time, easing: k.easing, pos: k.pos, rot: [0, k.yaw, 0] as Vec3, scale: [1, 1, 1] as Vec3 }));
+    return { ...o, color: mann, height: d.subjectHeight, keys: keys?.length ? keys : undefined };
+  });
+}
+
+function applyData(raw: SavedState) {
+  const d = raw as SavedState & Legacy;
+  const objects = migrateObjects(d);
+  const { subjectHeight: _h, subjectKeys: _k, ...rest } = d;
+  const { mann: _m, ...style } = { ...DEFAULT_STYLE, ...d.style } as typeof DEFAULT_STYLE & { mann?: string };
   setState({
-    ...d,
+    ...rest,
     blenderScene: d.blenderScene ?? null,
-    objects: d.blenderScene ? d.objects : d.objects.filter(o => o.kind !== 'importato'),
+    lock: { ...DEFAULT_LOCK, ...d.lock },
+    subjectId: d.subjectId !== undefined ? d.subjectId : objects.some(o => o.id === MANNEQUIN_ID) ? MANNEQUIN_ID : null,
+    selectedObjKey: null,
+    pendingPoses: {},
+    objects: d.blenderScene ? objects : objects.filter(o => o.kind !== 'importato'),
     exportAudio: d.exportAudio ?? true,
     center: d.center ?? false,
     safe: d.safe ?? false,
     handheld: d.handheld ?? store.getState().handheld,
-    subjectHeight: d.subjectHeight ?? MANNEQUIN_HEIGHT,
     // progetti salvati prima dell'opzione "soggetto": manichino
-    style: { ...DEFAULT_STYLE, ...d.style },
+    style,
     camera: d.camera ?? d.keyframes[0]?.camera ?? DEFAULT_CAMERA,
     time: 0,
     playing: false,
@@ -99,8 +135,12 @@ export function newProject() {
   setState({
     projectName: t('project.defaultName'),
     keyframes: [],
-    objects: store.getState().objects.filter(o => o.id === MANNEQUIN_ID).map(o => ({ ...o, pos: [0, 0, 0], rot: [0, 0, 0] })),
+    objects: [DEFAULT_MANNEQUIN],
+    subjectId: DEFAULT_MANNEQUIN.id,
     blenderScene: null,
+    selectedObjKey: null,
+    pendingPoses: {},
+    lock: DEFAULT_LOCK,
     camera: DEFAULT_CAMERA,
     time: 0,
     playing: false,

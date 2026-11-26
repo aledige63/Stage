@@ -29,8 +29,12 @@ and scale cues without leaking into the result.
   arc shot + push, lateral tracking, zoom in.
 - **Handheld camera**: deterministic shake with intensity, frequency and variant — the preview and
   the export match frame by frame.
-- **Scene blocking**: cubes, spheres, cylinders and panels you can move, rotate, scale and tint;
-  the mannequin can be moved and turned, and its height adjusted.
+- **Camera in the director view**: click it (or pick it in the scene list) to move it with the gizmo,
+  together with its aim point like a dolly, or rotate it on its own axis (pan, tilt, roll, horizon
+  kept level). The aim point can be selected and moved on its own.
+- **Scene blocking**: mannequins, cubes, spheres, cylinders and panels you can add, move, rotate,
+  scale, hide and color (gray, white, black, red, blue, yellow, green, orange). A scene can also have
+  no mannequin at all. Mannequins have their own height. Every object can be renamed.
 - **Scenes from Blender**: import a GLB/glTF set as separate objects, in neutral gray or with its
   own colors, embedded in the project. See [Scenes from Blender](#scenes-from-blender).
 - **Undo / redo** for keyframes, objects, scene and style.
@@ -40,11 +44,15 @@ and scale cues without leaking into the result.
 - **Export**: H.264 MP4 at 720p or 1080p, rendered frame by frame (independent of your computer's
   speed), with an optional **silent AAC audio track** for samplers that require an audio input.
 - **Prompt generator**: describes the opening/closing framing and every segment of the move in
-  English, ready to paste into your video model. A collapsed **Ref2VA** example shows
+  English, ready to paste into your video model. A **MiniMax Compiler** version and a collapsed **Ref2VA** example show
   ready-made pieces for a structured MiniMax H3 prompt.
 - **Projects**: save/open `.stage.json` files (move them between PC and Mac) plus automatic saving
   in the browser.
 - **Italian and English interface**.
+- **Animated objects**: every object has its own keyframe track (position, rotation, scale, same
+  curves as the camera). One object can be the **main subject**, used by quick framing, presets, the
+  prompt. The camera target can optionally be locked to any object (head, chest or waist of a
+  mannequin, or any point).
 - **Subject in the guide video**: mannequin, cylinder, block (position, size and facing only) or
   none (floor and reference columns only).
 
@@ -109,22 +117,36 @@ Click a keyframe ◆ or a segment to choose its curve and path:
 **Arc** circles around the subject (orbits), **Linear** goes straight (dolly, truck, crane).
 Or start from a **Preset**.
 
+To animate an object, select it, press **Shift+Enter** (or the **●** button with its name), move the
+playhead, move the object and press it again. Each animated object gets its own track under the
+camera one. Optionally tick **Lock the target** in the Camera panel and pick an object (the main
+subject by default): the camera then stays aimed at the chosen point and follows it. The prompt names
+the other objects by their name if you set one (type it in English, e.g. "the red car"), otherwise by
+color and shape ("the red cube moves 2.0 m to the right of the frame").
+
 | Shortcut | Action |
 |----------|--------|
 | Space | Play / pause |
 | Enter | Save keyframe (or update the one at the playhead) |
+| Shift + Enter | Save a keyframe of the selected object |
 | Home / End | Start / end |
 | Page Up / Page Down | Previous / next keyframe |
 | Delete | Delete the selected keyframe |
+| Right-click on a keyframe | Menu: interpolation, path, go to, duplicate at playhead, update, delete |
 
 ### 3. Export
 Click **Export…**, choose 720p or 1080p and press **Export MP4**. Then **Copy prompt** and use the
 video and the prompt together in your video model (for example as the camera/motion reference in
 MiniMax H3).
 
-The dialog shows two prompts:
+The dialog shows three prompts:
 - **Original prompt**: a description of the camera move, to use as it is or to give to an LLM that
   fits it into a larger prompt.
+- **Prompt for MiniMax Compiler**: only the narrative body, to paste into the Compiler's guide prompt
+  field with the camera + Subject guide role. The mannequin is named by color (to map it to the
+  character of the cut), with no sections and no `<Subject 1>`/`<Video 1>` tokens. A simple shape
+  (say, a box for a car) becomes another subject to map if you tick "Stands for a subject in the
+  final video" in its properties.
 - **Ref2VA prompt (example)**, collapsed below it: pieces labeled `subject_definitions`,
   `retention_analysis` and `detailed_description`, using the placeholders you set (default
   `<Subject 1>` and `<Video 1>`).

@@ -188,3 +188,59 @@ export function step(c: CameraState, action: Action, amount: number): CameraStat
     case 'zoom': return zoom(c, amount * 0.7);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Camera trascinata col gizmo in vista regia
+// ---------------------------------------------------------------------------
+
+const tmpCam = new THREE.Object3D();
+const BACK = new THREE.Vector3(0, 0, -1);
+
+/** Orientamento della camera (senza mano libera): come applyToCamera. */
+export function cameraQuaternion(c: CameraState, out = new THREE.Quaternion()) {
+  tmpCam.position.set(c.pos[0], c.pos[1], c.pos[2]);
+  tmpCam.up.copy(UP);
+  // Object3D.lookAt punta l'asse +Z: per le camere serve -Z, quindi si guarda dalla parte opposta
+  const P = v(c.pos);
+  tmpCam.lookAt(P.clone().multiplyScalar(2).sub(v(c.target)));
+  tmpCam.rotateZ(-c.roll * DEG);
+  return out.copy(tmpCam.quaternion);
+}
+
+/**
+ * Sposta la camera senza cambiare la direzione dello sguardo: anche il target trasla
+ * (come un carrello). La camera non scende sotto il pavimento.
+ */
+export function moveCameraTo(c: CameraState, pos: Vec3): CameraState {
+  const P = v(pos);
+  if (P.y < MIN_HEIGHT) P.y = MIN_HEIGHT;
+  const delta = P.clone().sub(v(c.pos));
+  return { ...c, pos: arr(P), target: arr(v(c.target).add(delta)) };
+}
+
+/**
+ * Ruota la camera sul proprio asse: il target resta alla stessa distanza nella nuova direzione
+ * e il roll si ricava dall'orientamento (vicino a quello di partenza, senza salti di 360°).
+ */
+export function rotateCameraTo(c: CameraState, q: THREE.Quaternion): CameraState {
+  const P = v(c.pos);
+  const dist = Math.max(MIN_DISTANCE, P.distanceTo(v(c.target)));
+  const forward = BACK.clone().applyQuaternion(q);
+  // niente sguardo perfettamente verticale: lookAt perderebbe il riferimento
+  if (Math.abs(forward.y) > 0.995) return c;
+  const target = P.clone().addScaledVector(forward, dist);
+  const base = cameraQuaternion({ ...c, target: arr(target), roll: 0 });
+  const rel = base.invert().multiply(q);
+  let r = (-2 * Math.atan2(rel.z, rel.w)) / DEG;
+  r += Math.round((c.roll - r) / 360) * 360;
+  return { ...c, target: arr(target), roll: clamp(r, -ROLL_MAX, ROLL_MAX) };
+}
+
+/** Solo il roll: la direzione dello sguardo resta quella di c. */
+export function rollCameraTo(c: CameraState, q: THREE.Quaternion): CameraState {
+  const base = cameraQuaternion({ ...c, roll: 0 });
+  const rel = base.invert().multiply(q);
+  let r = (-2 * Math.atan2(rel.z, rel.w)) / DEG;
+  r += Math.round((c.roll - r) / 360) * 360;
+  return { ...c, roll: clamp(r, -ROLL_MAX, ROLL_MAX) };
+}
